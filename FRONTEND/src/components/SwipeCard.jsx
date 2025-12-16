@@ -20,15 +20,16 @@
 
 import { motion } from "framer-motion";
 
-export default function SwipeCard({ skill }) {
+export default function SwipeCard({ user }) {
   return (
     <motion.div
       drag="x"
       dragConstraints={{ left: -200, right: 200 }}
       className="w-80 h-96 glass flex flex-col justify-center items-center"
     >
-      <h2 className="text-2xl font-bold">{skill.name}</h2>
-      <p className="text-gray-400 mt-4">{skill.mode}</p>
+      <h2 className="text-2xl font-bold">{user.name}</h2>
+      <p className="text-gray-400 mt-4">Teaches: {user.skillsToTeach.join(", ")}</p>
+      <p className="text-gray-400 mt-2">Learns: {user.skillsToLearn.join(", ")}</p>
     </motion.div>
   );
 }
