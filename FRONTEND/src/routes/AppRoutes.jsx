@@ -5,8 +5,6 @@ import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import LiveSession from "../pages/Livesession";
-import Profile from "../pages/profile";
-
 
 export default function AppRoutes() {
   return (
@@ -17,8 +15,6 @@ export default function AppRoutes() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/live" element={<LiveSession />} />
-      <Route path="/profile" element={<Profile />} />
-      {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );
 }
