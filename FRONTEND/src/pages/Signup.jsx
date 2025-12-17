@@ -1,89 +1,114 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import API from "../services/api";   // ✅ DEFAULT IMPORT
+import { motion } from "framer-motion";
+import API from "../services/api";
 
 export default function Signup() {
-  const [data, setData] = useState({
-    name: "",
-    email: "",
-    password: ""
-  });
-
+  const [data, setData] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
+    e.preventDefault();
     try {
-      const res = await API.post("/auth/register", data); // ✅ correct route
-      alert("Signup successful");
+      await API.post("/auth/register", data);
       navigate("/login");
-    } catch (error) {
-      alert(error.response?.data?.msg || "Signup failed");
+    } catch (err) {
+      alert("Signup failed");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-slate-900 to-black px-4">
-      <div className="relative w-full max-w-md">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-cyan-900/10 via-violet-900/20 to-indigo-900/10 blur-3xl opacity-60 rounded-2xl" />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-8 sm:p-10 text-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Create Account</h1>
-              <p className="text-sm text-slate-300 mt-1">Join and start collaborating</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-400 to-violet-500 shadow-md flex items-center justify-center">
-              <span className="font-bold text-white">P</span>
-            </div>
-          </div>
+      {/* 🌌 BACKGROUND IMAGE */}
+      <div
+        className="absolute inset-0 bg-cover bg-center scale-110"
+        style={{
+          backgroundImage:
+            "url(https://images.unsplash.com/photo-1519389950473-47ba0277781c)",
+        }}
+      />
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            <label className="block">
-              <span className="sr-only">Name</span>
-              <input
-                placeholder="Name"
-                required
-                className="w-full bg-white/3 border border-white/10 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 transition"
-                onChange={(e) => setData({ ...data, name: e.target.value })}
-              />
-            </label>
+      {/* 🎨 Animated Gradient Overlay */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 2 }}
+        className="absolute inset-0 bg-gradient-to-br from-black/80 via-slate-900/80 to-black/90"
+      />
 
-            <label className="block">
-              <span className="sr-only">Email</span>
-              <input
-                type="email"
-                placeholder="Email"
-                required
-                className="w-full bg-white/3 border border-white/10 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition"
-                onChange={(e) => setData({ ...data, email: e.target.value })}
-              />
-            </label>
+      {/* 💎 Glass Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 80, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-md p-8 rounded-3xl 
+        bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_80px_rgba(139,92,246,0.25)]"
+      >
 
-            <label className="block">
-              <span className="sr-only">Password</span>
-              <input
-                type="password"
-                placeholder="Password"
-                required
-                className="w-full bg-white/3 border border-white/10 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 transition"
-                onChange={(e) => setData({ ...data, password: e.target.value })}
-              />
-            </label>
+        {/* ✨ Heading */}
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-3xl font-bold text-white text-center"
+        >
+          Create Your Account
+        </motion.h1>
 
-            <button
-              type="submit"
-              className="w-full mt-2 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-cyan-400 text-white font-semibold rounded-lg py-3 px-4 hover:scale-[1.02] transform transition shadow-lg"
-            >
-              Create Account
-            </button>
-          </form>
+        <p className="text-center text-slate-300 mt-2">
+          Enter the future of collaboration 🚀
+        </p>
 
-          <div className="mt-5 text-center text-sm text-slate-300">
-            Already have an account? <Link to="/login" className="text-white font-medium underline-offset-2 hover:underline">Log in</Link>
-          </div>
-        </div>
-      </div>
+        {/* 📝 Form */}
+        <form onSubmit={handleSignup} className="mt-6 space-y-4">
+
+          {["name", "email", "password"].map((field, i) => (
+            <motion.input
+              key={field}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 + i * 0.1 }}
+              type={field === "password" ? "password" : "text"}
+              placeholder={field.toUpperCase()}
+              required
+              className="w-full rounded-xl bg-black/40 border border-white/20 px-4 py-3 
+              text-white placeholder-slate-400 focus:outline-none 
+              focus:ring-2 focus:ring-violet-500/50 transition-all"
+              onChange={(e) =>
+                setData({ ...data, [field]: e.target.value })
+              }
+            />
+          ))}
+
+          {/* 🚀 CTA Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full mt-4 py-3 rounded-xl font-semibold text-white 
+            bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400 
+            shadow-[0_0_30px_rgba(139,92,246,0.6)]"
+          >
+            Create Account
+          </motion.button>
+        </form>
+
+        {/* 🔗 Login */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-6 text-center text-slate-300"
+        >
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-violet-400 font-semibold hover:text-cyan-400 transition"
+          >
+            Log in
+          </Link>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }
