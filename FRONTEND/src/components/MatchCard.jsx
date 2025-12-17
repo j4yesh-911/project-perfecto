@@ -1,8 +1,18 @@
-export default function MatchCard({ user }) {
+import { useNavigate } from "react-router-dom";
+
+const MatchCard = ({ user }) => {
+  const navigate = useNavigate();
+
+  const openChat = () => {
+    localStorage.setItem("chatUser", JSON.stringify(user));
+    navigate("/chat");
+  };
+
   return (
-    <div className="glass p-4">
-      <h3>{user.name}</h3>
-      <p>{user.teachingMode.join(" / ")}</p>
+    <div onClick={openChat} className="cursor-pointer">
+      <h3>{user.username}</h3>
     </div>
   );
-}
+};
+
+export default MatchCard;
