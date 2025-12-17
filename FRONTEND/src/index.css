@@ -9,3 +9,35 @@ body {
 .glass {
   @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl;
 }
+body {
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  font-family: sans-serif;
+}
+
+.auth-box {
+  width: 320px;
+  margin: 120px auto;
+  padding: 30px;
+  background: #ffffff10;
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  color: white;
+}
+
+.auth-box input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.auth-box button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: linear-gradient(to right, #7c3aed, #38bdf8);
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
