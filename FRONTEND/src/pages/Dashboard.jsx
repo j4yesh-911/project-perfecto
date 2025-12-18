@@ -7,6 +7,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
 
+  const handleUserAction = (userId) => {
+    setUsers(prev => prev.filter(u => u._id !== userId));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
@@ -24,7 +28,7 @@ export default function Dashboard() {
         setCurrentUserId(meRes.data._id);
 
         // Fetch all users
-        const usersRes = await API.get("/users", {
+        const usersRes = await API.get("/users/potential-matches", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -52,7 +56,7 @@ export default function Dashboard() {
 
         <div className="flex gap-6 flex-wrap justify-center">
           {users.filter(u => u._id !== currentUserId).map((u) => (
-            <SwipeCard key={u._id} user={u} />
+            <SwipeCard key={u._id} user={u} onAction={handleUserAction} />
           ))}
         </div>
       </div>

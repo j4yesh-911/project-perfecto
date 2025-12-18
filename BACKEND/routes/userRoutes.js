@@ -24,6 +24,7 @@ const {
 } = require("../controllers/userController");
 
 router.get("/", authMiddleware, getAllUsers);        // ✅ NEW
+router.get("/potential-matches", authMiddleware, getPotentialMatches); // ✅ NEW
 router.get("/:id", authMiddleware, getUserById);     // ✅ NEW
 router.post("/complete-profile", authMiddleware, completeProfile);
 router.put("/update-profile", authMiddleware, updateProfile);

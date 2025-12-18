@@ -39,11 +39,11 @@ exports.createLike = async (req, res) => {
       if (mutual) {
         // Create chat if not exists
         let chat = await Chat.findOne({
-          participants: { $all: [fromUserId, toUserId] },
+          members: { $all: [fromUserId, toUserId] },
         });
         if (!chat) {
           chat = new Chat({
-            participants: [fromUserId, toUserId],
+            members: [fromUserId, toUserId],
           });
           await chat.save();
         }
