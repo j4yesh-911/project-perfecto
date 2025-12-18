@@ -5,7 +5,10 @@ import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import LiveSession from "../pages/Livesession";
-import Profile from "../pages/Profile"; // <-- make sure this path is correct
+import Profile from "../pages/Profile"; 
+import Chat from "../pages/Chat";
+import CompleteProfile from "../pages/CompleteProfile";
+
 
 export default function AppRoutes() {
   return (
@@ -17,6 +20,9 @@ export default function AppRoutes() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/live" element={<LiveSession />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/chat" element={<Chat/>}/>
+      <Route path="/complete-profile" element={<CompleteProfile />} />
+      {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );
 }

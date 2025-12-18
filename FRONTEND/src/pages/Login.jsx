@@ -7,91 +7,65 @@ export default function Login() {
   const [data, setData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await API.post("/auth/login", data);
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-        navigate("/dashboard");
-      }
-    } catch {
-      alert("Login failed");
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await API.post("/auth/login", data);
+
+    localStorage.setItem("token", res.data.token);
+
+    // 🔑 IMPORTANT LOGIC
+    if (res.data.isProfileComplete) {
+      navigate("/dashboard");
+    } else {
+      navigate("/complete-profile");
     }
-  };
+  } catch (err) {
+    alert(err.response?.data?.msg || "Login failed");
+  }
+};
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
-
-      {/* ✅ BACKGROUND IMAGE (CLEAR & VISIBLE) */}
       <img
         src="https://images.unsplash.com/photo-1519389950473-47ba0277781c"
-        alt="background"
         className="absolute inset-0 w-full h-full object-cover"
       />
-
-      {/* ✅ LIGHT OVERLAY (does NOT hide image) */}
       <div className="absolute inset-0 bg-black/40"></div>
 
-      {/* 🔥 GLASS LOGIN CARD */}
-      <motion.div
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 w-full max-w-md p-8 rounded-2xl
-        bg-white/15 backdrop-blur-xl border border-white/30
-        shadow-2xl"
-      >
-        {/* TITLE */}
-        <h1 className="text-3xl font-bold text-white text-center">
+      <motion.div className="relative z-10 w-full max-w-md p-8 bg-white/15 backdrop-blur-xl rounded-2xl">
+        <h1 className="text-3xl text-white text-center font-bold">
           Welcome Back
         </h1>
-        <p className="text-center text-slate-200 mt-2">
-          Login to continue 🚀
-        </p>
 
-        {/* FORM */}
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <input
             type="email"
             placeholder="Email"
             required
-            className="w-full px-4 py-3 rounded-lg bg-white/80 text-black
-            placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full text-black px-4 py-3 rounded"
             onChange={(e) =>
               setData({ ...data, email: e.target.value })
             }
           />
-
           <input
             type="password"
             placeholder="Password"
             required
-            className="w-full px-4 py-3 rounded-lg bg-white/80 text-black
-            placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="w-full text-black px-4 py-3 rounded"
             onChange={(e) =>
               setData({ ...data, password: e.target.value })
             }
           />
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full py-3 rounded-lg font-semibold text-white
-            bg-gradient-to-r from-violet-500 to-cyan-400 shadow-lg"
-          >
+          <button className="w-full py-3 bg-violet-600 text-white rounded">
             Login
-          </motion.button>
+          </button>
         </form>
 
-        {/* SIGNUP */}
-        <p className="mt-5 text-center text-slate-200">
-          Don’t have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-cyan-300 font-semibold hover:underline"
-          >
-            Sign up
+        <p className="mt-4 text-center text-white">
+          No account?{" "}
+          <Link to="/signup" className="text-cyan-300">
+            Signup
           </Link>
         </p>
       </motion.div>
