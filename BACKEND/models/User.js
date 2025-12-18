@@ -2,61 +2,29 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true
+    profilePic: {
+  type: String,
+  default: "",
     },
+    name: String,
+    username: String,
+    email: String,
+    password: String,
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true
+    age: Number,
+    gender: String,
+    phone: String,
+    address: String,
+
+    skillsToTeach: [String],
+    skillsToLearn: [String],
+
+    isProfileComplete: {
+      type: Boolean,
+      default: false,
     },
-
-    password: {
-      type: String,
-      required: true
-    },
-
-    skillsToTeach: {
-      type: [String],
-      default: []
-    },
-
-    skillsToLearn: {
-      type: [String],
-      default: []
-    },
-
-    teachingMode: {
-      type: [String],
-      enum: ["online", "offline"],
-      default: []
-    },
-
-    learningMode: {
-      type: [String],
-      enum: ["online", "offline"],
-      default: []
-    },
-
-    location: {
-      city: {
-        type: String,
-        default: ""
-      },
-      state: {
-        type: String,
-        default: ""
-      }
-    }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("User", userSchema);

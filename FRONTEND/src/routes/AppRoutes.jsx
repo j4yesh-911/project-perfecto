@@ -6,6 +6,7 @@ import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import LiveSession from "../pages/Livesession";
 import Chat from "../pages/Chat";
+import CompleteProfile from "../pages/CompleteProfile";
 import profile from "../pages/profile";
 import Profile from "../pages/profile";
 
@@ -20,8 +21,6 @@ export default function AppRoutes() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/live" element={<LiveSession />} />
       <Route path="/chat" element={<Chat/>}/>
-      <Route path="/profile" element={<Profile />} />
-      {/* <Route path="/session/:id" element={<Session />} /> */}
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );
