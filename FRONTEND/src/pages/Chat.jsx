@@ -1,84 +1,122 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import API from "../services/api";
 import { socket } from "../services/socket";
-import api from "../services/api";
 
-const Chat = () => {
-  // ✅ USERS FROM LOCAL STORAGE (REQUIRED)
-  const currentUser = JSON.parse(localStorage.getItem("user"));
-  const friend = JSON.parse(localStorage.getItem("chatUser"));
-
-  if (!currentUser || !friend) {
-    return (
-      <div className="h-screen flex items-center justify-center text-white bg-black">
-        No chat selected
-      </div>
-    );
-  }
-
+export default function Chat() {
+  const { userId } = useParams(); // The other user's ID from URL
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [chatUser, setChatUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [chatId, setChatId] = useState(null);
+  const messagesEndRef = useRef(null);
 
-  // ✅ SOCKET CONNECTION
   useEffect(() => {
-    socket.emit("addUser", currentUser._id);
-
-    socket.on("getMessage", (data) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          senderId: data.senderId,
-          text: data.text,
-        },
-      ]);
-    });
-
-    return () => {
-      socket.off("getMessage");
-    };
-  }, [currentUser._id]);
-
-  // ✅ CREATE CHAT & LOAD OLD MESSAGES
-  useEffect(() => {
-    const initChat = async () => {
+    const fetchUsers = async () => {
       try {
-        const res = await api.post("/chats", {
-          senderId: currentUser._id,
-          receiverId: friend._id,
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        // Get current user
+        const meRes = await API.get("/auth/me", {
+          headers: { Authorization: `Bearer ${token}` }
         });
+        setCurrentUser(meRes.data);
 
-        setChatId(res.data._id);
-
-        const msgs = await api.get(`/messages/${res.data._id}`);
-        setMessages(msgs.data);
-      } catch (err) {
-        console.error("Chat init error:", err);
+        // Get chat user
+        const userRes = await API.get(`/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setChatUser(userRes.data);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        navigate("/dashboard");
       }
     };
 
-    initChat();
-  }, [currentUser._id, friend._id]);
+    if (userId) {
+      fetchUsers();
+    }
+  }, [userId, navigate]);
 
-  // ✅ SEND MESSAGE
+  useEffect(() => {
+    if (currentUser) {
+      socket.emit("addUser", currentUser._id);
+
+      socket.on("getMessage", (data) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            senderId: data.senderId,
+            text: data.text,
+          },
+        ]);
+      });
+
+      return () => {
+        socket.off("getMessage");
+      };
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser && chatUser) {
+      const initChat = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await API.post("/chats", {
+            senderId: currentUser._id,
+            receiverId: chatUser._id,
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          setChatId(res.data._id);
+
+          const msgs = await API.get(`/messages/${res.data._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setMessages(msgs.data);
+        } catch (err) {
+          console.error("Chat init error:", err);
+        }
+      };
+
+      initChat();
+    }
+  }, [currentUser, chatUser]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const sendMessage = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !currentUser || !chatUser) return;
 
     socket.emit("sendMessage", {
       senderId: currentUser._id,
-      receiverId: friend._id,
+      receiverId: chatUser._id,
       text,
     });
 
     try {
-      await api.post("/messages", {
+      const token = localStorage.getItem("token");
+      await API.post("/messages", {
         chatId,
         senderId: currentUser._id,
         text,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setMessages((prev) => [
         ...prev,
-        { senderId: currentUser._id, text },
+        { senderId: currentUser._id, text, _id: Date.now() },
       ]);
       setText("");
     } catch (err) {
@@ -86,46 +124,74 @@ const Chat = () => {
     }
   };
 
+  if (!currentUser || !chatUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white bg-gradient-to-br from-black via-slate-900 to-black">
+        Loading chat...
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-black text-white">
-      {/* HEADER */}
-      <div className="p-3 border-b border-gray-700">
-        Chat with <b>{friend.username}</b>
-      </div>
-
-      {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`mb-2 ${
-              m.senderId === currentUser._id ? "text-right" : "text-left"
-            }`}
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-black text-white p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center mb-6">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="mr-4 px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
           >
-            <span className="bg-blue-600 px-3 py-1 rounded-xl inline-block">
-              {m.text}
-            </span>
-          </div>
-        ))}
-      </div>
+            ← Back
+          </button>
+          <h1 className="text-2xl font-bold text-neon">Chat with {chatUser.username}</h1>
+        </div>
 
-      {/* INPUT */}
-      <div className="flex p-2 border-t border-gray-700">
-        <input
-          className="flex-1 bg-gray-800 p-2 rounded outline-none"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
-        />
-        <button
-          onClick={sendMessage}
-          className="ml-2 px-4 bg-blue-600 rounded"
-        >
-          Send
-        </button>
+        <div className="glass p-6 rounded-2xl">
+          <div className="h-96 overflow-y-auto mb-4 p-4 bg-black/20 rounded-lg">
+            {messages.length === 0 ? (
+              <p className="text-gray-400 text-center">No messages yet. Start the conversation!</p>
+            ) : (
+              messages.map((m, i) => (
+                <div
+                  key={m._id || i}
+                  className={`mb-4 flex ${m.senderId === currentUser._id ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs px-4 py-2 rounded-lg ${
+                      m.senderId === currentUser._id
+                        ? 'bg-neon text-black'
+                        : 'bg-white/10 text-white'
+                    }`}
+                  >
+                    <p>{m.text}</p>
+                    {m.createdAt && (
+                      <p className="text-xs opacity-70 mt-1">
+                        {new Date(m.createdAt).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="flex gap-4">
+            <input
+              className="flex-1 p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Type a message..."
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            />
+            <button
+              onClick={sendMessage}
+              className="px-6 py-3 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
+            >
+              Send
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-export default Chat;

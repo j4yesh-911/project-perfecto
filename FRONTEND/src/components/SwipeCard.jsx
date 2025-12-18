@@ -1,12 +1,19 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function SwipeCard({ user }) {
+  const navigate = useNavigate();
+
   if (!user) return null;
 
   const avatar =
     user.profilePic ||
     "https://ui-avatars.com/api/?name=" +
       encodeURIComponent(user.name);
+
+  const handleMessage = () => {
+    navigate(`/chat/${user._id}`);
+  };
 
   return (
     <motion.div
@@ -36,6 +43,14 @@ export default function SwipeCard({ user }) {
         <span className="font-semibold">Learns:</span>{" "}
         {user.skillsToLearn?.join(", ") || "N/A"}
       </p>
+
+      {/* Message Button */}
+      <button
+        onClick={handleMessage}
+        className="mt-6 px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
+      >
+        💬 Message
+      </button>
     </motion.div>
   );
 }
