@@ -6,9 +6,6 @@ import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import LiveSession from "../pages/Livesession";
 import Chat from "../pages/Chat";
-import CompleteProfile from "../pages/CompleteProfile";
-import profile from "../pages/profile";
-import Profile from "../pages/profile";
 
 
 export default function AppRoutes() {
