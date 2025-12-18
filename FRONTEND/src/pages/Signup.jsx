@@ -4,16 +4,24 @@ import { motion } from "framer-motion";
 import API from "../services/api";
 
 export default function Signup() {
-  const [data, setData] = useState({ name: "", email: "", password: "" });
+  const [data, setData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/auth/register", data);
+      // 🔥 FIXED API ROUTE
+      const res = await API.post("/auth/signup", data);
+
+      alert(res.data.msg || "Signup successful");
       navigate("/login");
     } catch (err) {
-      alert("Signup failed");
+      alert(err.response?.data?.msg || "Signup failed");
     }
   };
 
