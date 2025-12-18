@@ -7,16 +7,23 @@ export default function Login() {
   const [data, setData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await API.post("/auth/login", data);
-      localStorage.setItem("token", res.data.token);
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await API.post("/auth/login", data);
+
+    localStorage.setItem("token", res.data.token);
+
+    // 🔑 IMPORTANT LOGIC
+    if (res.data.isProfileComplete) {
       navigate("/dashboard");
-    } catch (err) {
-      alert(err.response?.data?.msg || "Login failed");
+    } else {
+      navigate("/complete-profile");
     }
-  };
+  } catch (err) {
+    alert(err.response?.data?.msg || "Login failed");
+  }
+};
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
@@ -36,7 +43,7 @@ export default function Login() {
             type="email"
             placeholder="Email"
             required
-            className="w-full px-4 py-3 rounded"
+            className="w-full text-black px-4 py-3 rounded"
             onChange={(e) =>
               setData({ ...data, email: e.target.value })
             }
@@ -45,7 +52,7 @@ export default function Login() {
             type="password"
             placeholder="Password"
             required
-            className="w-full px-4 py-3 rounded"
+            className="w-full text-black px-4 py-3 rounded"
             onChange={(e) =>
               setData({ ...data, password: e.target.value })
             }

@@ -3,21 +3,32 @@ const jwt = require("jsonwebtoken");
 module.exports = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  console.log("AUTH HEADER RECEIVED:", authHeader); // 🔍 DEBUG
-
-  if (!authHeader)
+  if (!authHeader) {
     return res.status(401).json({ msg: "No token provided" });
+  }
 
-  const [type, token] = authHeader.split(" ");
+  const parts = authHeader.split(" ");
 
-  if (type !== "Bearer" || !token)
-    return res.status(401).json({ msg: "Invalid token format" });
+  if (parts.length !== 2) {
+    return res.status(401).json({ msg: "Token error" });
+  }
+
+  const [scheme, token] = parts;
+
+  if (!/^Bearer$/i.test(scheme)) {
+    return res.status(401).json({ msg: "Token malformatted" });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: decoded.id };
+
+    // VERY IMPORTANT FOR PROFILE FLOW
+    req.user = {
+      id: decoded.id,
+    };
+
     next();
   } catch (err) {
-    return res.status(401).json({ msg: "Invalid token" });
+    return res.status(401).json({ msg: "Token invalid or expired" });
   }
 };

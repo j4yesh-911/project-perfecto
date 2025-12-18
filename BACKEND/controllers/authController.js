@@ -16,22 +16,29 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ msg: "Email already registered" });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
+      isProfileComplete: false,
     });
 
-    res.status(201).json({ msg: "Signup successful" });
+    // 🔑 issue token on signup
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({
+      msg: "Signup successful",
+      token,
+    });
   } catch (error) {
-    // 🔥 HANDLE DUPLICATE KEY ERROR
     if (error.code === 11000) {
-      return res.status(400).json({
-        msg: "Email already registered",
-      });
+      return res.status(400).json({ msg: "Email already registered" });
     }
 
     console.error(error);
@@ -67,14 +74,20 @@ exports.login = async (req, res) => {
     res.json({
       msg: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      isProfileComplete: user.isProfileComplete,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ msg: "Server error" });
+  }
+};
+
+// ================= GET LOGGED-IN USER =================
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ msg: "Failed to fetch user" });
   }
 };
