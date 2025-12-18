@@ -1,3 +1,4 @@
+// routes/authRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -12,6 +13,6 @@ router.get("/ping", (req, res) => {
 
 router.post("/signup", signup);
 router.post("/login", login);
-router.get("/me", getMe);
+router.get("/me", authMiddleware, getMe); // ✅ protected
 
 module.exports = router;

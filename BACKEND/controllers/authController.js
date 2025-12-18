@@ -1,3 +1,4 @@
+// controllers/authController.js
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -25,7 +26,6 @@ exports.signup = async (req, res) => {
       isProfileComplete: false,
     });
 
-    // 🔑 issue token on signup
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
@@ -85,9 +85,14 @@ exports.login = async (req, res) => {
 // ================= GET LOGGED-IN USER =================
 exports.getMe = async (req, res) => {
   try {
+    // authMiddleware ne req.user.id set kiya hai
     const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
     res.json(user);
   } catch (error) {
+    console.error("getMe error:", error);
     res.status(500).json({ msg: "Failed to fetch user" });
   }
 };

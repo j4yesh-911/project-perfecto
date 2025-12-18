@@ -1,34 +1,26 @@
+// middleware/authMiddleware.js
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-module.exports = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ msg: "No token provided" });
-  }
-
-  const parts = authHeader.split(" ");
-
-  if (parts.length !== 2) {
-    return res.status(401).json({ msg: "Token error" });
-  }
-
-  const [scheme, token] = parts;
-
-  if (!/^Bearer$/i.test(scheme)) {
-    return res.status(401).json({ msg: "Token malformatted" });
-  }
-
+module.exports = async (req, res, next) => {
   try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
+    if (!token) {
+      return res.status(401).json({ msg: "No token, authorization denied" });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // VERY IMPORTANT FOR PROFILE FLOW
-    req.user = {
-      id: decoded.id,
-    };
+    // token me { id: user._id } set kiya tha
+    req.user = { id: decoded.id };
 
     next();
   } catch (err) {
-    return res.status(401).json({ msg: "Token invalid or expired" });
+    console.error("authMiddleware error:", err);
+    res.status(401).json({ msg: "Token is not valid" });
   }
 };

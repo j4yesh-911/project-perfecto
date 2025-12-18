@@ -30,10 +30,11 @@ export default function CompleteProfile() {
     const fetchMe = async () => {
       try {
         const res = await API.get("/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+
 
         setForm((prev) => ({
           ...prev,
