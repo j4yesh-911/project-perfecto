@@ -1,111 +1,103 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import API from "../services/api";
 import SwipeCard from "../components/SwipeCard";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
-  const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [usernameFilter, setUsernameFilter] = useState("");
   const [skillsFilter, setSkillsFilter] = useState("");
 
-  const handleUserAction = (userId) => {
-    setUsers(prev => prev.filter(u => u._id !== userId));
-  };
-
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchUsers = async () => {
       const token = localStorage.getItem("token");
 
       if (!token) {
-        alert("Please login again");
+        alert("No token found. Please login again.");
         return;
       }
 
       try {
-        // Fetch current user and all users in parallel for better performance
-        const [currentUserRes, usersRes] = await Promise.all([
-          API.get("/auth/me"),
-          API.get("/users")
-        ]);
+        const res = await API.get("/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-        if (currentUserRes.data?._id) {
-          setCurrentUserId(currentUserRes.data._id);
-        }
-
-        // Backend already excludes current user, but filter again for safety
-        setUsers((usersRes.data || []).filter(u => u._id !== currentUserRes.data?._id));
+        setUsers(res.data);
       } catch (err) {
         console.error(err);
-        if (err.response?.status === 401) {
-          alert("Unauthorized - Please login again");
-        } else {
-          alert("Failed to load users");
-        }
+        alert(err.response?.data?.msg || "Unauthorized");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchUsers();
   }, []);
 
-  // Filter users based on username and skills, excluding current user
+  // Filter users based on username and skills
   const filteredUsers = users.filter((user) => {
-    // Exclude current user
-    if (user._id === currentUserId) return false;
-
     // Filter by username (case-insensitive)
     const matchesUsername = usernameFilter === "" || 
-      user.name?.toLowerCase().includes(usernameFilter.toLowerCase()) ||
-      user.username?.toLowerCase().includes(usernameFilter.toLowerCase());
+      (user.username && user.username.toLowerCase().includes(usernameFilter.toLowerCase())) ||
+      (user.name && user.name.toLowerCase().includes(usernameFilter.toLowerCase()));
 
-    // Filter by skills (check if any skill in skillsToTeach matches)
+    // Filter by skills (match inside skillsToTeach array, case-insensitive)
     const matchesSkills = skillsFilter === "" || 
-      user.skillsToTeach?.some((skill) =>
+      (user.skillsToTeach && user.skillsToTeach.some(skill => 
         skill.toLowerCase().includes(skillsFilter.toLowerCase())
-      );
+      ));
 
     // Both filters must match
     return matchesUsername && matchesSkills;
   });
 
-  if (loading)
-    return <p className="p-6 text-white">Loading users...</p>;
+  if (loading) return <p className="p-6 text-white">Loading...</p>;
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-black via-slate-900 to-black text-white">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">
-          Discover People
-        </h1>
-        <p className="text-gray-400 mb-8">
-          Connect, chat & exchange skills 🚀
-        </p>
+    <div className="min-h-screen p-6 text-white">
+      <h1 className="text-3xl mb-6">Discover Users</h1>
 
-        {filteredUsers.length === 0 && (
-          <p className="text-center text-gray-400 mt-12">
-            No other users found
-          </p>
-        )}
+      {/* Filter Inputs */}
+      <div className="mb-6 flex gap-4 flex-wrap">
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="username-filter" className="block text-sm font-semibold mb-2">
+            Filter by Username
+          </label>
+          <input
+            id="username-filter"
+            type="text"
+            value={usernameFilter}
+            onChange={(e) => setUsernameFilter(e.target.value)}
+            placeholder="Search by username or name..."
+            className="w-full px-4 py-2 rounded-lg bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          />
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="skills-filter" className="block text-sm font-semibold mb-2">
+            Filter by Skills
+          </label>
+          <input
+            id="skills-filter"
+            type="text"
+            value={skillsFilter}
+            onChange={(e) => setSkillsFilter(e.target.value)}
+            placeholder="Search by skills to teach..."
+            className="w-full px-4 py-2 rounded-lg bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          />
+        </div>
+      </div>
 
-        <motion.div
-          initial="show"
-          animate="show"
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: { staggerChildren: 0.15 },
-            },
-          }}
-          className="flex gap-6 flex-wrap justify-center"
-        >
-          {filteredUsers.map(user => (
-            <SwipeCard key={user._id} user={user} />
-          ))}
-        </motion.div>
+      {filteredUsers.length === 0 && users.length > 0 && (
+        <p className="text-gray-400 mb-4">No users match your filters</p>
+      )}
+      {users.length === 0 && <p>No users found</p>}
+
+      <div className="flex gap-6 flex-wrap">
+        {filteredUsers.map((u) => (
+          <SwipeCard key={u._id} user={u} />
+        ))}
       </div>
     </div>
   );
