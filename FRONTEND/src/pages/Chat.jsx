@@ -1,131 +1,85 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useParams } from "react-router-dom";
+import API from "../services/api";
 import { socket } from "../services/socket";
-import api from "../services/api";
 
-const Chat = () => {
-  // ✅ USERS FROM LOCAL STORAGE (REQUIRED)
-  const currentUser = JSON.parse(localStorage.getItem("user"));
-  const friend = JSON.parse(localStorage.getItem("chatUser"));
-
-  if (!currentUser || !friend) {
-    return (
-      <div className="h-screen flex items-center justify-center text-white bg-black">
-        No chat selected
-      </div>
-    );
-  }
-
+export default function Chat() {
+  const { chatId } = useParams();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const [chatId, setChatId] = useState(null);
+  const bottomRef = useRef(null);
 
-  // ✅ SOCKET CONNECTION
+  // join socket room
   useEffect(() => {
-    socket.emit("addUser", currentUser._id);
+    if (!chatId) return;
 
-    socket.on("getMessage", (data) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          senderId: data.senderId,
-          text: data.text,
-        },
-      ]);
+    socket.emit("joinChat", chatId);
+
+    socket.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
     });
 
-    return () => {
-      socket.off("getMessage");
-    };
-  }, [currentUser._id]);
+    return () => socket.off("receiveMessage");
+  }, [chatId]);
 
-  // ✅ CREATE CHAT & LOAD OLD MESSAGES
+  // load old messages
   useEffect(() => {
-    const initChat = async () => {
-      try {
-        const res = await api.post("/chats", {
-          senderId: currentUser._id,
-          receiverId: friend._id,
-        });
+    if (!chatId) return;
 
-        setChatId(res.data._id);
-
-        const msgs = await api.get(`/messages/${res.data._id}`);
-        setMessages(msgs.data);
-      } catch (err) {
-        console.error("Chat init error:", err);
-      }
+    const loadMessages = async () => {
+      const res = await API.get(`/messages/${chatId}`);
+      setMessages(res.data);
     };
 
-    initChat();
-  }, [currentUser._id, friend._id]);
+    loadMessages();
+  }, [chatId]);
 
-  // ✅ SEND MESSAGE
+  // auto scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    socket.emit("sendMessage", {
-      senderId: currentUser._id,
-      receiverId: friend._id,
+    const res = await API.post("/messages", {
+      chatId,
       text,
     });
 
-    try {
-      await api.post("/messages", {
-        chatId,
-        senderId: currentUser._id,
-        text,
-      });
-
-      setMessages((prev) => [
-        ...prev,
-        { senderId: currentUser._id, text },
-      ]);
-      setText("");
-    } catch (err) {
-      console.error("Send message error:", err);
-    }
+    socket.emit("sendMessage", res.data);
+    setMessages((prev) => [...prev, res.data]);
+    setText("");
   };
 
   return (
-    <div className="h-screen flex flex-col bg-black text-white">
-      {/* HEADER */}
-      <div className="p-3 border-b border-gray-700">
-        Chat with <b>{friend.username}</b>
-      </div>
-
-      {/* MESSAGES */}
+    <div className="h-screen bg-black text-white flex flex-col">
       <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`mb-2 ${
-              m.senderId === currentUser._id ? "text-right" : "text-left"
-            }`}
-          >
-            <span className="bg-blue-600 px-3 py-1 rounded-xl inline-block">
+        {messages.map((m) => (
+          <div key={m._id} className="mb-2">
+            <div className="inline-block bg-white/10 px-4 py-2 rounded-lg">
               {m.text}
-            </span>
+            </div>
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
-      {/* INPUT */}
-      <div className="flex p-2 border-t border-gray-700">
+      <div className="p-4 flex gap-2 border-t border-white/10">
         <input
-          className="flex-1 bg-gray-800 p-2 rounded outline-none"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
+          className="flex-1 p-3 rounded-lg bg-white/10"
+          placeholder="Message…"
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
         <button
           onClick={sendMessage}
-          className="ml-2 px-4 bg-blue-600 rounded"
+          className="px-6 bg-blue-500 rounded-lg font-semibold"
         >
           Send
         </button>
       </div>
     </div>
   );
-};
-
-export default Chat;
+}

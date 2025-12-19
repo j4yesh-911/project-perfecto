@@ -1,22 +1,32 @@
 const router = require("express").Router();
 const Chat = require("../models/Chat");
+const auth = require("../middleware/authMiddleware");
 
-// create chat
-router.post("/", async (req, res) => {
-  const newChat = new Chat({
-    members: [req.body.senderId, req.body.receiverId],
+router.post("/find-or-create", auth, async (req, res) => {
+  const { receiverId } = req.body;
+  const senderId = req.user.id;
+
+  let chat = await Chat.findOne({
+    members: { $all: [senderId, receiverId] },
   });
 
-  const savedChat = await newChat.save();
-  res.status(200).json(savedChat);
+  if (!chat) {
+    chat = await Chat.create({
+      members: [senderId, receiverId],
+    });
+  }
+
+  res.json(chat);
 });
 
-// get user chats
-router.get("/:userId", async (req, res) => {
+router.get("/", auth, async (req, res) => {
   const chats = await Chat.find({
-    members: { $in: [req.params.userId] },
-  });
-  res.status(200).json(chats);
+    members: req.user.id,
+  })
+    .populate("members", "name profilePic")
+    .sort({ updatedAt: -1 });
+
+  res.json(chats);
 });
 
 module.exports = router;

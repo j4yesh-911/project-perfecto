@@ -1,54 +1,48 @@
 const router = require("express").Router();
 const Message = require("../models/Message");
-const mongoose = require("mongoose");
+const Chat = require("../models/Chat");
+const auth = require("../middleware/authMiddleware");
 
-// add message
-router.post("/", async (req, res) => {
+router.post("/", auth, async (req, res) => {
   try {
-    const { senderId, chatId, text } = req.body;
+    const { chatId, text } = req.body;
 
-    // ✅ validate senderId
-    if (!mongoose.Types.ObjectId.isValid(senderId)) {
-      return res.status(400).json({
-        error: "Invalid senderId. Must be a MongoDB ObjectId",
-      });
+    // ✅ validation
+    if (!chatId || !text) {
+      return res.status(400).json({ msg: "chatId and text required" });
     }
 
-    // (optional but recommended)
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return res.status(400).json({
-        error: "Invalid chatId",
-      });
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ msg: "Unauthorized" });
     }
 
-    const newMessage = new Message({
-      senderId,
+    // ✅ FIXED HERE (Message not message)
+    const message = await Message.create({
       chatId,
+      sender: req.user.id,
       text,
     });
 
-    const savedMessage = await newMessage.save();
-    res.status(200).json(savedMessage);
+    await Chat.findByIdAndUpdate(chatId, {
+      lastMessage: {
+        text,
+        sender: req.user.id,
+      },
+    });
+
+    res.status(200).json(message);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to send message" });
+    console.error("Message send error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-// get messages
-router.get("/:chatId", async (req, res) => {
-  try {
-    const { chatId } = req.params;
+router.get("/:chatId", auth, async (req, res) => {
+  const messages = await Message.find({
+    chatId: req.params.chatId,
+  });
 
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return res.status(400).json({ error: "Invalid chatId" });
-    }
-
-    const messages = await Message.find({ chatId });
-    res.status(200).json(messages);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch messages" });
-  }
+  res.json(messages);
 });
 
 module.exports = router;
