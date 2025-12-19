@@ -1,118 +1,66 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import API from "../services/api";
 
-export default function SwipeCard({ user, onAction }) {
+export default function SwipeCard({ user }) {
   const navigate = useNavigate();
-  const [isDragging, setIsDragging] = useState(false);
 
   if (!user) return null;
 
   const avatar =
     user.profilePic ||
-    "https://ui-avatars.com/api/?name=" +
-      encodeURIComponent(user.name);
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`;
 
   const handleMessage = () => {
     navigate(`/chat/${user._id}`);
   };
 
-  const handleLike = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await API.post("/likes", { toUserId: user._id, action: "like" }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data.msg === "It's a match!") {
-        alert(`It's a match with ${user.name}! You can now chat.`);
-        navigate(`/chat/${res.data.chatId}`);
-      }
-      onAction(user._id); // Remove from list
-    } catch (err) {
-      console.error(err);
-      alert("Error liking user");
-    }
-  };
-
-  const handleDislike = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await API.post("/likes", { toUserId: user._id, action: "dislike" }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      onAction(user._id); // Remove from list
-    } catch (err) {
-      console.error(err);
-      alert("Error disliking user");
-    }
-  };
-
-  const handleDragEnd = (event, info) => {
-    setIsDragging(false);
-    const threshold = 100;
-    if (info.offset.x > threshold) {
-      handleLike();
-    } else if (info.offset.x < -threshold) {
-      handleDislike();
-    }
-  };
-
   return (
     <motion.div
-      drag="x"
-      dragConstraints={{ left: -200, right: 200 }}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={handleDragEnd}
-      animate={{ rotate: isDragging ? 0 : 0 }} // Optional: add rotation
-      className="w-80 h-96 rounded-2xl bg-white/10 backdrop-blur-xl
-                 border border-white/20 shadow-lg
-                 flex flex-col items-center p-6 relative"
+      initial={{ opacity: 0, y: 40, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ scale: 1.05 }}
+      transition={{ type: "spring", stiffness: 120 }}
+      className="w-80 h-96 rounded-2xl
+                 bg-white/10 backdrop-blur-xl
+                 border border-white/20
+                 shadow-xl
+                 flex flex-col items-center p-6"
     >
-      {/* 👤 Profile Image */}
-      <img
+      {/* Avatar */}
+      <motion.img
         src={avatar}
         alt={user.name}
-        className="w-28 h-28 rounded-full object-cover border-2 border-purple-500"
+        className="w-28 h-28 rounded-full object-cover
+                   border-2 border-violet-500"
+        whileHover={{ rotate: 2 }}
       />
 
-      {/* 👤 Name */}
+      {/* Name */}
       <h2 className="text-2xl font-bold mt-4">{user.name}</h2>
 
-      {/* 🎓 Skills */}
-      <p className="text-gray-300 text-center mt-4">
-        <span className="font-semibold">Teaches:</span>{" "}
+      {/* Skills */}
+      <p className="text-gray-300 text-center mt-4 text-sm">
+        <span className="font-semibold text-white">Teaches:</span>{" "}
         {user.skillsToTeach?.join(", ") || "N/A"}
       </p>
 
-      <p className="text-gray-300 text-center mt-2">
-        <span className="font-semibold">Learns:</span>{" "}
+      <p className="text-gray-300 text-center mt-2 text-sm">
+        <span className="font-semibold text-white">Learns:</span>{" "}
         {user.skillsToLearn?.join(", ") || "N/A"}
       </p>
 
-      {/* Action Buttons */}
-      <div className="flex gap-4 mt-6">
-        <button
-          onClick={handleDislike}
-          className="px-4 py-2 bg-red-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
-        >
-          ❌ Dislike
-        </button>
-        <button
-          onClick={handleLike}
-          className="px-4 py-2 bg-green-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
-        >
-          ❤️ Like
-        </button>
-      </div>
-
       {/* Message Button */}
-      <button
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.05 }}
         onClick={handleMessage}
-        className="mt-4 px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
+        className="mt-auto px-6 py-2
+                   bg-gradient-to-r from-violet-500 to-cyan-400
+                   rounded-lg font-semibold text-white
+                   shadow-lg"
       >
         💬 Message
-      </button>
+      </motion.button>
     </motion.div>
   );
 }

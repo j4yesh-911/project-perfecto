@@ -3,12 +3,16 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     profilePic: {
-  type: String,
-  default: "",
+      type: String,
+      default: "",
     },
     name: String,
     username: String,
-    email: String,
+    email: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     password: String,
 
     age: Number,
@@ -26,5 +30,10 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Add indexes for better query performance
+userSchema.index({ isProfileComplete: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ _id: 1, isProfileComplete: 1 }); // Compound index for getAllUsers query
 
 module.exports = mongoose.model("User", userSchema);

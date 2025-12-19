@@ -2,9 +2,12 @@ const mongoose = require("mongoose");
 
 const ChatSchema = new mongoose.Schema(
   {
-    members: {
-      type: [String],   // ✅ MUST be array
-      required: true,
+    members: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ],
+    lastMessage: {
+      text: String,
+      sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     },
   },
   { timestamps: true }
