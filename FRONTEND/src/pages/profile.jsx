@@ -1,30 +1,72 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, User2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
 export default function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({
-    name: "Haridrumad",
-    age: 20,
-    gender: "Walmart bag",
-    email: "HDSJ29@gamil.com",
-    phone: "+91 7340452164",
-    skills: ["React", "Node.js"],
-    profilePic: null,
+    name: "",
+    age: "",
+    gender: "",
+    email: "",
+    phone: "",
+    username: "",
+    address: "",
+    skillsToLearn: [],
+    skillsToTeach: [],
+    profilePic: "",
   });
 
-  const [newSkill, setNewSkill] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalProfile, setOriginalProfile] = useState(null);
 
-  const handleSave = () => {
-    setSaving(true);
-  
-    setTimeout(() => {
-      navigate("/");
-    }, 1500); 
-  };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+        const res = await API.get("/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setProfile({
+          name: res.data.name || "",
+          age: res.data.age || "",
+          gender: res.data.gender || "",
+          email: res.data.email || "",
+          phone: res.data.phone || "",
+          username: res.data.username || "",
+          address: res.data.address || "",
+          skillsToLearn: res.data.skillsToLearn || [],
+          skillsToTeach: res.data.skillsToTeach || [],
+          profilePic: res.data.profilePic || "",
+        });
+        setOriginalProfile({
+          name: res.data.name || "",
+          age: res.data.age || "",
+          gender: res.data.gender || "",
+          email: res.data.email || "",
+          phone: res.data.phone || "",
+          username: res.data.username || "",
+          address: res.data.address || "",
+          skillsToLearn: res.data.skillsToLearn || [],
+          skillsToTeach: res.data.skillsToTeach || [],
+          profilePic: res.data.profilePic || "",
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        navigate("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [navigate]);
 
   const ProfileIcon = profile.gender === "Baddie" ? User2 : User;
 
@@ -33,32 +75,32 @@ export default function Profile() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setProfile((prev) => ({ ...prev, profilePic: reader.result }));
-      };
-      reader.readAsDataURL(file);
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await API.put("/users/update-profile", {
+        ...profile,
+        skillsToTeach: profile.skillsToTeach,
+        skillsToLearn: profile.skillsToLearn,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOriginalProfile({ ...profile });
+      setIsEditing(false);
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Update failed:", error);
+      alert("Failed to update profile");
     }
   };
 
-  const addSkill = () => {
-    if (newSkill.trim()) {
-      setProfile((prev) => ({
-        ...prev,
-        skills: [...prev.skills, newSkill.trim()],
-      }));
-      setNewSkill("");
-    }
-  };
-
-  const removeSkill = (index) => {
-    setProfile((prev) => ({
-      ...prev,
-      skills: prev.skills.filter((_, i) => i !== index),
-    }));
+  const handleCancel = () => {
+    setProfile({ ...originalProfile });
+    setIsEditing(false);
   };
 
   return (
@@ -69,12 +111,45 @@ export default function Profile() {
           background: rgba(0, 0, 0, 0.8);
         }
       `}</style>
+      {loading ? (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-xl">Loading...</div>
+        </div>
+      ) : (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl mx-auto glass p-8 rounded-2xl"
       >
         <h1 className="text-3xl font-bold text-center mb-8 text-neon">Profile</h1>
+
+        {!isEditing && (
+          <div className="text-center mb-6">
+            <button
+              onClick={handleEdit}
+              className="px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
+            >
+              ✏️ Edit Profile
+            </button>
+          </div>
+        )}
+
+        {isEditing && (
+          <div className="text-center mb-6 flex gap-4 justify-center">
+            <button
+              onClick={handleSave}
+              className="px-6 py-2 bg-green-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
+            >
+              💾 Save Changes
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-6 py-2 bg-red-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
+            >
+              ❌ Cancel
+            </button>
+          </div>
+        )}
 
         {/* Profile Picture */}
         <div className="flex flex-col items-center mb-8">
@@ -90,17 +165,7 @@ export default function Profile() {
                 <ProfileIcon size={64} className="text-white" />
               </div>
             )}
-            <label className="absolute bottom-0 right-0 bg-neon text-black p-2 rounded-full cursor-pointer hover:bg-neon/80 transition">
-              📷
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
           </div>
-          <p className="mt-2 text-gray-400">Click the camera to upload a new picture</p>
         </div>
 
         {/* Form Fields */}
@@ -109,120 +174,148 @@ export default function Profile() {
             <label className="block text-sm font-medium mb-2">Name</label>
             <input
               type="text"
-              name="name"
               value={profile.name}
+              readOnly={!isEditing}
               onChange={handleInputChange}
-              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+              name="name"
+              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Age</label>
+              <label className="block text-sm font-medium mb-2">Username</label>
               <input
-                type="number"
-                name="age"
-                value={profile.age}
+                type="text"
+                value={profile.username}
+                readOnly={!isEditing}
                 onChange={handleInputChange}
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+                name="username"
+                className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Gender</label>
+              <label className="block text-sm font-medium mb-2">Age</label>
+              <input
+                type="number"
+                value={profile.age}
+                readOnly={!isEditing}
+                onChange={handleInputChange}
+                name="age"
+                className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Gender</label>
+            {isEditing ? (
               <select
-                name="gender"
                 value={profile.gender}
                 onChange={handleInputChange}
-                className="w-full p-3 rounded-lg bg-black/20 border border-white/20 focus:border-neon focus:outline-none transition text-white"
-              > 
-
-
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>              
-                <option value="Banna">Banna</option>
-                <option value="Chikna">Chikna</option>
-                <option value="KawaChudiNinja">KawachudiNinja</option>
-                <option value="Waah shampy waah">Waah shampy waah</option>
-                <option value="Baddie">Baddie</option>
+                name="gender"
+                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition text-white"
+              >
+                <option value="" className="bg-slate-800">Select Gender</option>
+                <option value="Male" className="bg-slate-800">Male</option>
+                <option value="Female" className="bg-slate-800">Female</option>
+                <option value="Other" className="bg-slate-800">Other</option>
               </select>
-            </div>
+            ) : (
+              <input
+                type="text"
+                value={profile.gender}
+                readOnly
+                className="w-full p-3 rounded-lg bg-white/10 border border-white/20"
+              />
+            )}
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">Email</label>
             <input
               type="email"
-              name="email"
               value={profile.email}
-              onChange={handleInputChange}
-              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+              readOnly
+              className="w-full p-3 rounded-lg bg-white/10 border border-white/20"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">Phone Number</label>
             <input
-              type="tel"
-              name="phone"
+              type="text"
               value={profile.phone}
+              readOnly={!isEditing}
               onChange={handleInputChange}
-              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+              name="phone"
+              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
             />
           </div>
 
-          {/* Skills */}
           <div>
-            <label className="block text-sm font-medium mb-2">Skills</label>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {profile.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="bg-neon text-black px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                >
-                  {skill}
-                  <button
-                    onClick={() => removeSkill(index)}
-                    className="hover:text-red-500 transition"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
+            <label className="block text-sm font-medium mb-2">Address</label>
+            <input
+              type="text"
+              value={profile.address}
+              readOnly={!isEditing}
+              onChange={handleInputChange}
+              name="address"
+              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Skills to Learn</label>
+            {isEditing ? (
               <input
                 type="text"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                placeholder="Add a new skill"
-                className="flex-1 p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
-                onKeyPress={(e) => e.key === "Enter" && addSkill()}
+                value={profile.skillsToLearn.join(", ")}
+                onChange={(e) => setProfile(prev => ({ ...prev, skillsToLearn: e.target.value.split(", ").filter(s => s.trim()) }))}
+                placeholder="e.g., React, Node.js, Python"
+                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
               />
-              <button
-                onClick={addSkill}
-                className="px-4 py-3 bg-neon text-black rounded-lg hover:bg-neon/80 transition"
-              >
-                Add
-              </button>
-            </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {profile.skillsToLearn.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-neon/20 text-neon rounded-full text-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Skills to Teach</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profile.skillsToTeach.join(", ")}
+                onChange={(e) => setProfile(prev => ({ ...prev, skillsToTeach: e.target.value.split(", ").filter(s => s.trim()) }))}
+                placeholder="e.g., JavaScript, Design, Marketing"
+                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {profile.skillsToTeach.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Save Button */}
-        <div className="mt-8 text-center">
-          <motion.button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-8 py-3 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
-            animate={saving ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ duration: 0.5, repeat: saving ? Infinity : 0 }}
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </motion.button>
-        </div>
       </motion.div>
+    )}
     </div>
   );
 }

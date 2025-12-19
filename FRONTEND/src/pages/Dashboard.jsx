@@ -7,9 +7,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [usernameFilter, setUsernameFilter] = useState("");
   const [skillsFilter, setSkillsFilter] = useState("");
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  const handleUserAction = (userId) => {
+    setUsers(prev => prev.filter(u => u._id !== userId));
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -18,13 +23,18 @@ export default function Dashboard() {
       }
 
       try {
-        const res = await API.get("/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Fetch current user
+        const meRes = await API.get("/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentUserId(meRes.data._id);
+
+        // Fetch all users
+        const usersRes = await API.get("/users/potential-matches", {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        setUsers(res.data);
+        setUsers(usersRes.data);
       } catch (err) {
         console.error(err);
         alert(err.response?.data?.msg || "Unauthorized");
@@ -33,7 +43,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchUsers();
+    fetchData();
   }, []);
 
   // Filter users based on username and skills
@@ -58,47 +68,10 @@ export default function Dashboard() {
     <div className="min-h-screen p-6 text-white">
       <h1 className="text-3xl mb-6">Discover Users</h1>
 
-      {/* Filter Inputs */}
-      <div className="mb-6 flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="username-filter" className="block mb-2 text-sm font-medium">
-            Filter by Username
-          </label>
-          <input
-            id="username-filter"
-            type="text"
-            placeholder="Search by username..."
-            value={usernameFilter}
-            onChange={(e) => setUsernameFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 
-                     text-white placeholder-gray-400 focus:outline-none focus:ring-2 
-                     focus:ring-purple-500 focus:border-transparent"
-          />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="skills-filter" className="block mb-2 text-sm font-medium">
-            Filter by Skills
-          </label>
-          <input
-            id="skills-filter"
-            type="text"
-            placeholder="Search by skill..."
-            value={skillsFilter}
-            onChange={(e) => setSkillsFilter(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 
-                     text-white placeholder-gray-400 focus:outline-none focus:ring-2 
-                     focus:ring-purple-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {filteredUsers.length === 0 && users.length > 0 && (
-        <p className="mb-4 text-gray-400">No users match your filters</p>
-      )}
       {users.length === 0 && <p>No users found</p>}
 
       <div className="flex gap-6 flex-wrap">
-        {filteredUsers.map((u) => (
+        {users.map((u) => (
           <SwipeCard key={u._id} user={u} />
         ))}
       </div>
