@@ -10,7 +10,7 @@ export default function Home() {
       <p className="text-gray-400 max-w-xl mb-8">
         Teach what you know. Learn what you don't. Online or offline.
       </p>
-      <Link to="/auth" className="px-8 py-4 rounded-xl bg-neon text-black font-bold">
+      <Link to="/login" className="px-8 py-4 rounded-xl bg-neon text-black font-bold">
         Get Started
       </Link>
     </section>
