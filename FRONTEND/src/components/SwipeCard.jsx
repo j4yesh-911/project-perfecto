@@ -1,17 +1,20 @@
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
-export default function SwipeCard({ user }) {
-  const navigate = useNavigate();
-
+export default function SwipeCard({ user, onMessage }) {
   if (!user) return null;
 
   const avatar =
     user.profilePic ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`;
 
-  const handleMessage = () => {
-    navigate(`/chat/${user._id}`);
+  const handleMessage = async () => {
+    // 🔥 CALL BACKEND – NEVER NAVIGATE DIRECTLY
+    const res = await API.post("/chats/find-or-create", {
+      receiverId: user._id,
+    });
+
+    onMessage(res.data._id); // 🔥 PASS CHAT ID UP
   };
 
   return (
@@ -26,19 +29,15 @@ export default function SwipeCard({ user }) {
                  shadow-xl
                  flex flex-col items-center p-6"
     >
-      {/* Avatar */}
       <motion.img
         src={avatar}
         alt={user.name}
         className="w-28 h-28 rounded-full object-cover
                    border-2 border-violet-500"
-        whileHover={{ rotate: 2 }}
       />
 
-      {/* Name */}
       <h2 className="text-2xl font-bold mt-4">{user.name}</h2>
 
-      {/* Skills */}
       <p className="text-gray-300 text-center mt-4 text-sm">
         <span className="font-semibold text-white">Teaches:</span>{" "}
         {user.skillsToTeach?.join(", ") || "N/A"}
@@ -49,7 +48,6 @@ export default function SwipeCard({ user }) {
         {user.skillsToLearn?.join(", ") || "N/A"}
       </p>
 
-      {/* Message Button */}
       <motion.button
         whileTap={{ scale: 0.95 }}
         whileHover={{ scale: 1.05 }}

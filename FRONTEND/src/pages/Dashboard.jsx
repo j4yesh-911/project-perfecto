@@ -1,33 +1,26 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import SwipeCard from "../components/SwipeCard";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usernameFilter, setUsernameFilter] = useState("");
-  const [skillsFilter, setSkillsFilter] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("No token found. Please login again.");
-        return;
-      }
-
+    const fetchData = async () => {
       try {
-        const res = await API.get("/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const [meRes, usersRes] = await Promise.all([
+          API.get("/auth/me"),
+          API.get("/users"),
+        ]);
 
-        setUsers(res.data);
+        setCurrentUserId(meRes.data._id);
+        setUsers(usersRes.data.filter(u => u._id !== meRes.data._id));
       } catch (err) {
-        console.error(err);
-        alert(err.response?.data?.msg || "Unauthorized");
+        alert("Failed to load users");
       } finally {
         setLoading(false);
       }
@@ -36,68 +29,34 @@ export default function Dashboard() {
     fetchUsers();
   }, []);
 
-  // Filter users based on username and skills
-  const filteredUsers = users.filter((user) => {
-    // Filter by username (case-insensitive)
-    const matchesUsername = usernameFilter === "" || 
-      (user.username && user.username.toLowerCase().includes(usernameFilter.toLowerCase())) ||
-      (user.name && user.name.toLowerCase().includes(usernameFilter.toLowerCase()));
+  // 🔥 OPEN CHAT WITH BACKEND CHAT ID
+  const handleOpenChat = (chatId) => {
+    navigate(`/chat/${chatId}`);
+  };
 
-    // Filter by skills (match inside skillsToTeach array, case-insensitive)
-    const matchesSkills = skillsFilter === "" || 
-      (user.skillsToTeach && user.skillsToTeach.some(skill => 
-        skill.toLowerCase().includes(skillsFilter.toLowerCase())
-      ));
-
-    // Both filters must match
-    return matchesUsername && matchesSkills;
-  });
-
-  if (loading) return <p className="p-6 text-white">Loading...</p>;
+  if (loading) return <p className="p-6 text-white">Loading users...</p>;
 
   return (
-    <div className="min-h-screen p-6 text-white">
-      <h1 className="text-3xl mb-6">Discover Users</h1>
+    <div className="min-h-screen p-6 bg-gradient-to-br from-black via-slate-900 to-black text-white">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Discover People</h1>
+        <p className="text-gray-400 mb-8">
+          Connect, chat & exchange skills 🚀
+        </p>
 
-      {/* Filter Inputs */}
-      <div className="mb-6 flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="username-filter" className="block text-sm font-semibold mb-2">
-            Filter by Username
-          </label>
-          <input
-            id="username-filter"
-            type="text"
-            value={usernameFilter}
-            onChange={(e) => setUsernameFilter(e.target.value)}
-            placeholder="Search by username or name..."
-            className="w-full px-4 py-2 rounded-lg bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <label htmlFor="skills-filter" className="block text-sm font-semibold mb-2">
-            Filter by Skills
-          </label>
-          <input
-            id="skills-filter"
-            type="text"
-            value={skillsFilter}
-            onChange={(e) => setSkillsFilter(e.target.value)}
-            placeholder="Search by skills to teach..."
-            className="w-full px-4 py-2 rounded-lg bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-        </div>
-      </div>
-
-      {filteredUsers.length === 0 && users.length > 0 && (
-        <p className="text-gray-400 mb-4">No users match your filters</p>
-      )}
-      {users.length === 0 && <p>No users found</p>}
-
-      <div className="flex gap-6 flex-wrap">
-        {filteredUsers.map((u) => (
-          <SwipeCard key={u._id} user={u} />
-        ))}
+        <motion.div
+          className="flex gap-6 flex-wrap justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {users.map(user => (
+            <SwipeCard
+              key={user._id}
+              user={user}
+              onMessage={handleOpenChat} // 🔥 PASS HANDLER
+            />
+          ))}
+        </motion.div>
       </div>
     </div>
   );

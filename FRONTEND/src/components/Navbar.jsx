@@ -10,7 +10,6 @@ export default function Navbar() {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/chats">Chats</Link>
         <Link to="/profile">Profile</Link>
-        <Link to="/match">Match</Link>
         <ThemeToggle />
       </div>
     </nav>
