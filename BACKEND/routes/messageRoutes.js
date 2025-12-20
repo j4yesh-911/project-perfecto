@@ -4,43 +4,29 @@ const Chat = require("../models/Chat");
 const auth = require("../middleware/authMiddleware");
 
 router.post("/", auth, async (req, res) => {
-  try {
-    const { chatId, text } = req.body;
+  const { chatId, text } = req.body;
 
-    // ✅ validation
-    if (!chatId || !text) {
-      return res.status(400).json({ msg: "chatId and text required" });
-    }
+  const message = await Message.create({
+    chatId,
+    sender: req.user.id,
+    text,
+  });
 
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ msg: "Unauthorized" });
-    }
-
-    // ✅ FIXED HERE (Message not message)
-    const message = await Message.create({
-      chatId,
-      sender: req.user.id,
+  await Chat.findByIdAndUpdate(chatId, {
+    lastMessage: {
       text,
-    });
+      sender: req.user.id,
+    },
+    updatedAt: Date.now(),
+  });
 
-    await Chat.findByIdAndUpdate(chatId, {
-      lastMessage: {
-        text,
-        sender: req.user.id,
-      },
-    });
-
-    res.status(200).json(message);
-  } catch (err) {
-    console.error("Message send error:", err);
-    res.status(500).json({ msg: "Server error" });
-  }
+  res.status(201).json(message);
 });
 
 router.get("/:chatId", auth, async (req, res) => {
   const messages = await Message.find({
     chatId: req.params.chatId,
-  });
+  }).sort({ createdAt: 1 });
 
   res.json(messages);
 });

@@ -21,7 +21,7 @@ router.post("/find-or-create", auth, async (req, res) => {
 
 router.get("/", auth, async (req, res) => {
   const chats = await Chat.find({
-    members: req.user.id,
+    members: { $in: [req.user.id] },
   })
     .populate("members", "name profilePic")
     .sort({ updatedAt: -1 });
