@@ -23,7 +23,7 @@ router.get("/", auth, async (req, res) => {
   const chats = await Chat.find({
     members: { $in: [req.user.id] },
   })
-    .populate("members", "name profilePic")
+    .populate("members", "name profilePic lastSeen")
     .sort({ updatedAt: -1 });
 
   res.json(chats);

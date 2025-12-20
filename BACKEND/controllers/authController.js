@@ -71,6 +71,8 @@ exports.login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    await User.findByIdAndUpdate(user._id, { lastSeen: new Date() });
+
     res.json({
       msg: "Login successful",
       token,

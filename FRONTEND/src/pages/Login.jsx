@@ -40,6 +40,8 @@ const handleLogin = async (e) => {
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <input
+            id="email"
+            name="email"
             type="email"
             placeholder="Email"
             required
@@ -49,6 +51,8 @@ const handleLogin = async (e) => {
             }
           />
           <input
+            id="password"
+            name="password"
             type="password"
             placeholder="Password"
             required

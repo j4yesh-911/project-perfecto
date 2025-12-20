@@ -187,6 +187,7 @@ export default function CompleteProfile() {
           <div>
             <label className="block text-sm font-medium mb-2 text-neon">Username</label>
             <input
+              id="username"
               name="username"
               placeholder="Enter username"
               value={form.username}
@@ -197,6 +198,7 @@ export default function CompleteProfile() {
           <div>
             <label className="block text-sm font-medium mb-2 text-neon">Age</label>
             <input
+              id="age"
               name="age"
               type="number"
               placeholder="Enter age"
@@ -210,6 +212,7 @@ export default function CompleteProfile() {
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2 text-neon">Gender</label>
           <select
+            id="gender"
             name="gender"
             value={form.gender}
             onChange={handleChange}
@@ -226,6 +229,7 @@ export default function CompleteProfile() {
           <div>
             <label className="block text-sm font-medium mb-2 text-neon">Phone</label>
             <input
+              id="phone"
               name="phone"
               placeholder="Enter phone number"
               value={form.phone}
@@ -236,6 +240,7 @@ export default function CompleteProfile() {
           <div>
             <label className="block text-sm font-medium mb-2 text-neon">Address</label>
             <input
+              id="address"
               name="address"
               placeholder="Enter address"
               value={form.address}
@@ -248,6 +253,7 @@ export default function CompleteProfile() {
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2 text-neon">Skills to Teach (comma-separated)</label>
           <input
+            id="skillsToTeach"
             name="skillsToTeach"
             placeholder="e.g., React, Node.js, Python"
             value={form.skillsToTeach}
@@ -259,6 +265,7 @@ export default function CompleteProfile() {
         <div className="mb-8">
           <label className="block text-sm font-medium mb-2 text-neon">Skills to Learn (comma-separated)</label>
           <input
+            id="skillsToLearn"
             name="skillsToLearn"
             placeholder="e.g., JavaScript, Design, Marketing"
             value={form.skillsToLearn}

@@ -97,20 +97,27 @@ const config = {
 export const startLocalStream = async (videoRef) => {
   if (localStream) return localStream;
 
-  localStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true,
-  });
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
 
-  videoRef.current.srcObject = localStream;
-  videoRef.current.muted = true;
-  await videoRef.current.play();
+    if (videoRef.current) {
+      videoRef.current.srcObject = localStream;
+      videoRef.current.muted = true;
+      await videoRef.current.play();
+    }
 
-  return localStream;
+    return localStream;
+  } catch (error) {
+    console.error("Error accessing media devices:", error);
+    throw error;
+  }
 };
 
 export const createPeerConnection = async (socket, chatId, remoteVideoRef) => {
-  if (peerConnection) return peerConnection;
+  if (peerConnection && peerConnection.connectionState !== 'closed') return peerConnection;
   if (!localStream) throw new Error("Local stream not started");
 
   peerConnection = new RTCPeerConnection(config);
@@ -144,12 +151,20 @@ export const createPeerConnection = async (socket, chatId, remoteVideoRef) => {
 };
 
 export const createOffer = async (socket, chatId) => {
+  if (!peerConnection) {
+    console.error("Peer connection not initialized");
+    return;
+  }
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   socket.emit("webrtcOffer", { chatId, offer });
 };
 
 export const handleOffer = async (socket, chatId, offer) => {
+  if (!peerConnection) {
+    console.error("Peer connection not initialized");
+    return;
+  }
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(offer)
   );
@@ -159,13 +174,22 @@ export const handleOffer = async (socket, chatId, offer) => {
 };
 
 export const handleAnswer = async (answer) => {
+  if (!peerConnection) {
+    console.error("Peer connection not initialized");
+    return;
+  }
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription(answer)
   );
 };
 
 export const addIceCandidate = async (candidate) => {
-  if (!peerConnection || !peerConnection.remoteDescription) {
+  if (!peerConnection) {
+    console.error("Peer connection not initialized");
+    pendingCandidates.push(candidate);
+    return;
+  }
+  if (!peerConnection.remoteDescription) {
     pendingCandidates.push(candidate);
     return;
   }

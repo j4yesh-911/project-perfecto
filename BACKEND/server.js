@@ -2,6 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const path = require("path");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
@@ -15,6 +17,7 @@ const likeRoutes = require("./routes/likeRoutes");
 
 const Message = require("./models/Message");
 const Chat = require("./models/Chat");
+const User = require("./models/User");
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +27,9 @@ connectDB();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+// Serve static files from parent directory (for ringtone.mp3)
+app.use(express.static(path.join(__dirname, '..')));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -40,6 +46,17 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
   console.log("🔌 socket connected", socket.id);
+
+  socket.on("authenticate", (token) => {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.id;
+      console.log("Authenticated socket for user:", decoded.id);
+    } catch (err) {
+      console.log("Authentication failed", err);
+      // socket.disconnect(); // Temporarily disable
+    }
+  });
 
   socket.on("joinChat", (chatId) => {
     console.log("👥 joinChat", chatId);
@@ -61,6 +78,52 @@ socket.on("iceCandidate", ({ chatId, candidate }) => {
   socket.to(chatId).emit("iceCandidate", candidate);
 });
 
+socket.on("callEnd", ({ chatId }) => {
+  socket.to(chatId).emit("callEnd");
+});
+
+socket.on("callDeclined", async ({ chatId }) => {
+  console.log("📞 Call declined for chat:", chatId);
+  
+  // Create a system message indicating call was declined
+  const message = await Message.create({
+    chatId,
+    sender: socket.userId, // The person who declined the call
+    text: "Call declined",
+    type: "system",
+  });
+
+  // Update chat's last message
+  await Chat.findByIdAndUpdate(chatId, {
+    lastMessage: {
+      text: "Call declined",
+      sender: socket.userId,
+    },
+    updatedAt: Date.now(),
+  });
+
+  // Emit the decline message to the chat room
+  io.to(chatId).emit("receiveMessage", {
+    _id: message._id,
+    chatId,
+    sender: socket.userId,
+    text: "Call declined",
+    type: "system",
+    status: message.status,
+    createdAt: message.createdAt,
+  });
+
+  // Also emit the callDeclined event to end the call
+  socket.to(chatId).emit("callDeclined");
+});
+
+socket.on("typingStart", ({ chatId, userId }) => {
+  socket.to(chatId).emit("typingStart", { chatId, userId });
+});
+
+socket.on("typingStop", ({ chatId, userId }) => {
+  socket.to(chatId).emit("typingStop", { chatId, userId });
+});
 
 
 
@@ -68,7 +131,11 @@ socket.on("iceCandidate", ({ chatId, candidate }) => {
 
 
 
-  socket.on("sendMessage", async ({ chatId, senderId, text }) => {
+
+  socket.on("sendMessage", async ({ chatId, text }) => {
+    const senderId = socket.userId;
+    if (!senderId) return;
+
     console.log("📨 sendMessage", { chatId, senderId, text });
 
     const message = await Message.create({
@@ -76,6 +143,9 @@ socket.on("iceCandidate", ({ chatId, candidate }) => {
       sender: senderId,
       text,
     });
+
+    // Update lastSeen for sender
+    await User.findByIdAndUpdate(senderId, { lastSeen: new Date() });
 
     console.log("💾 saved message", message._id);
 
@@ -100,12 +170,16 @@ socket.on("iceCandidate", ({ chatId, candidate }) => {
       chatId,
       sender: senderId,
       text,
+      type: "user",
+      status: message.status,
       createdAt: message.createdAt,
     });
 
     console.log("📤 emitted to room", chatId);
   });
 });
+
+module.exports = { io };
 
 server.listen(5000, () => {
   console.log("Backend running on http://localhost:5000");

@@ -174,7 +174,9 @@ export default function Signup() {
           {["name", "email", "password"].map((field) => (
             <input
               key={field}
-              type={field === "password" ? "password" : "text"}
+              id={field}
+              name={field}
+              type={field === "password" ? "password" : field === "email" ? "email" : "text"}
               placeholder={field.toUpperCase()}
               required
               className="w-full p-3 rounded bg-black/40 border border-white/20 text-white"

@@ -173,6 +173,7 @@ export default function Profile() {
           <div>
             <label className="block text-sm font-medium mb-2">Name</label>
             <input
+              id="name"
               type="text"
               value={profile.name}
               readOnly={!isEditing}
@@ -186,6 +187,7 @@ export default function Profile() {
             <div>
               <label className="block text-sm font-medium mb-2">Username</label>
               <input
+                id="username"
                 type="text"
                 value={profile.username}
                 readOnly={!isEditing}
