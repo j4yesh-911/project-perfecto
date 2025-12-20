@@ -45,6 +45,28 @@ io.on("connection", (socket) => {
     socket.join(chatId);
   });
 
+
+
+
+socket.on("webrtcOffer", ({ chatId, offer }) => {
+  socket.to(chatId).emit("webrtcOffer", offer);
+});
+
+socket.on("webrtcAnswer", ({ chatId, answer }) => {
+  socket.to(chatId).emit("webrtcAnswer", answer);
+});
+
+socket.on("iceCandidate", ({ chatId, candidate }) => {
+  socket.to(chatId).emit("iceCandidate", candidate);
+});
+
+
+
+
+
+
+
+
   socket.on("sendMessage", async ({ chatId, senderId, text }) => {
     console.log("📨 sendMessage", { chatId, senderId, text });
 
