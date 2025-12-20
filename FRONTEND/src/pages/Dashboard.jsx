@@ -1,41 +1,27 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import SwipeCard from "../components/SwipeCard";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
-
-  const handleUserAction = (userId) => {
-    setUsers(prev => prev.filter(u => u._id !== userId));
-  };
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("No token found. Please login again.");
-        return;
-      }
-
       try {
-        // Fetch current user
-        const meRes = await API.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [meRes, usersRes] = await Promise.all([
+          API.get("/auth/me"),
+          API.get("/users"),
+        ]);
+
         setCurrentUserId(meRes.data._id);
-
-        // Fetch all users
-        const usersRes = await API.get("/users/potential-matches", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setUsers(usersRes.data);
+        setUsers(usersRes.data.filter(u => u._id !== meRes.data._id));
       } catch (err) {
-        console.error(err);
-        alert(err.response?.data?.msg || "Unauthorized");
+        alert("Failed to load users");
       } finally {
         setLoading(false);
       }
@@ -44,21 +30,34 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  if (loading) return <p className="p-6 text-white">Loading...</p>;
+  // 🔥 OPEN CHAT WITH BACKEND CHAT ID
+  const handleOpenChat = (chatId) => {
+    navigate(`/chat/${chatId}`);
+  };
+
+  if (loading) return <p className="p-6 text-white">Loading users...</p>;
 
   return (
-    <div className="min-h-screen p-6 text-white bg-gradient-to-br from-black via-slate-900 to-black">
+    <div className="min-h-screen p-6 bg-gradient-to-br from-black via-slate-900 to-black text-white">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2 text-neon">Discover Users</h1>
-        <p className="text-gray-300 mb-8">Start a chat with other people and exchange skills!</p>
+        <h1 className="text-3xl font-bold mb-2">Discover People</h1>
+        <p className="text-gray-400 mb-8">
+          Connect, chat & exchange skills 🚀
+        </p>
 
-        {users.length === 0 && <p className="text-center text-gray-400 mt-12">No users found. Be the first to complete your profile!</p>}
-
-        <div className="flex gap-6 flex-wrap justify-center">
-          {users.filter(u => u._id !== currentUserId).map((u) => (
-            <SwipeCard key={u._id} user={u} onAction={handleUserAction} />
+        <motion.div
+          className="flex gap-6 flex-wrap justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {users.map(user => (
+            <SwipeCard
+              key={user._id}
+              user={user}
+              onMessage={handleOpenChat} // 🔥 PASS HANDLER
+            />
           ))}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

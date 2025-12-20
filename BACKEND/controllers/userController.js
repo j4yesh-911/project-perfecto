@@ -46,12 +46,22 @@ exports.completeProfile = async (req, res) => {
 // ================= GET ALL USERS =================
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ isProfileComplete: true })
-      .select("-password");
+    const userId = req.user.id;
+
+    // Exclude current user and only get users with completed profiles
+    // Use lean() for better performance (returns plain JS objects instead of Mongoose documents)
+    const users = await User.find({ 
+      _id: { $ne: userId },
+      isProfileComplete: true 
+    })
+      .select("-password")
+      .lean()
+      .limit(100); // Limit results for better performance
 
     res.status(200).json(users);
   } catch (error) {
-    console.error(error);    res.status(500).json({ msg: "Failed to fetch users" });
+    console.error(error);
+    res.status(500).json({ msg: "Failed to fetch users" });
   }
 };
 

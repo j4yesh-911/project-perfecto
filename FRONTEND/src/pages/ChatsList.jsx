@@ -1,137 +1,112 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+import { getSocket } from "../services/socket"; // ✅ CHANGE
 
 export default function ChatsList() {
-  const navigate = useNavigate();
   const [chats, setChats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const socket = getSocket(); // ✅ SINGLE SOCKET
+
+  const myId = JSON.parse(
+    atob(localStorage.getItem("token").split(".")[1])
+  ).id;
 
   useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          navigate("/login");
-          return;
+    // load initial chats
+    const loadChats = async () => {
+      const res = await API.get("/chats");
+      setChats(res.data);
+    };
+    loadChats();
+
+    // realtime last-message update
+    const handleReceive = (message) => {
+      if (!message || !message.chatId) return;
+
+      setChats((prev) => {
+        const exists = prev.some((c) => c._id === message.chatId);
+
+        if (exists) {
+          const updated = prev.map((c) =>
+            c._id === message.chatId
+              ? {
+                  ...c,
+                  lastMessage: {
+                    text: message.text,
+                    sender: message.sender,
+                  },
+                  updatedAt: message.createdAt || new Date().toISOString(),
+                  unreadCounts: {
+                    ...c.unreadCounts,
+                    [myId]: (c.unreadCounts?.[myId] || 0) + 1,
+                  },
+                }
+              : c
+          );
+
+          // sort like Instagram (latest on top)
+          return updated.sort(
+            (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+          );
         }
 
-        // Get current user
-        const meRes = await API.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const currentUserId = meRes.data._id;
-
-        // Get user's chats
-        const chatsRes = await API.get(`/chats/${currentUserId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        // For each chat, get the other user and last message
-        const chatsWithUsers = await Promise.all(
-          chatsRes.data.map(async (chat) => {
-            const otherUserId = chat.members.find(id => id !== currentUserId);
-            const userRes = await API.get(`/users/${otherUserId}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // Get last message
-            const messagesRes = await API.get(`/messages/${chat._id}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const lastMessage = messagesRes.data[messagesRes.data.length - 1];
-
-            return {
-              ...chat,
-              otherUser: userRes.data,
-              lastMessage
-            };
-          })
-        );
-
-        setChats(chatsWithUsers);
-      } catch (error) {
-        console.error("Failed to fetch chats:", error);
-      } finally {
-        setLoading(false);
-      }
+        // new chat → reload list
+        API.get("/chats").then((res) => setChats(res.data));
+        return prev;
+      });
     };
 
-    fetchChats();
-  }, [navigate]);
+    socket.on("receiveMessage", handleReceive);
 
-  const handleChatClick = (userId) => {
-    navigate(`/chat/${userId}`);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white bg-gradient-to-br from-black via-slate-900 to-black">
-        Loading chats...
-      </div>
-    );
-  }
+    return () => {
+      socket.off("receiveMessage", handleReceive);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-black via-slate-900 to-black text-white">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="mr-4 px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
-          >
-            ← Back
-          </button>
-          <h1 className="text-3xl font-bold text-neon">My Chats</h1>
-        </div>
+    <div className="min-h-screen dark:bg-black dark:text-white light:bg-white light:text-black p-6">
+      <h1 className="text-3xl mb-6 font-bold">Chats</h1>
 
-        <div className="glass p-6 rounded-2xl">
-          {chats.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-lg mb-4">No chats yet</p>
-              <p className="text-gray-500">Start a conversation by messaging someone from the dashboard!</p>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="mt-4 px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
-              >
-                Find People to Chat
-              </button>
+      {chats.length === 0 && (
+        <p className="text-gray-400">No chats yet</p>
+      )}
+
+      {chats.map((chat) => {
+        const otherUser = chat.members.find(
+          (u) => u._id !== myId
+        );
+
+        const unread = chat.unreadCounts?.[myId] || 0;
+        const previewText = unread > 4 ? "4+ messages" : chat.lastMessage?.text || "Start a conversation";
+
+        return (
+          <div
+            key={chat._id}
+            onClick={() => navigate(`/chat/${chat._id}`)}
+            className="flex items-center gap-4 p-4 dark:hover:bg-white/10 light:hover:bg-gray-100 rounded-lg cursor-pointer relative"
+          >
+            <img
+              src={otherUser?.profilePic || "/avatar.png"}
+              className="w-12 h-12 rounded-full"
+            />
+
+            <div className="flex-1">
+              <p className="font-semibold">{otherUser?.name}</p>
+              <p className="text-sm dark:text-gray-400 light:text-gray-600 truncate">
+                {previewText}
+              </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {chats.map((chat) => (
-                <div
-                  key={chat._id}
-                  onClick={() => handleChatClick(chat.otherUser._id)}
-                  className="flex items-center p-4 bg-white/5 rounded-lg hover:bg-white/10 transition cursor-pointer"
-                >
-                  <img
-                    src={chat.otherUser.profilePic || "https://ui-avatars.com/api/?name=" + encodeURIComponent(chat.otherUser.name)}
-                    alt={chat.otherUser.name}
-                    className="w-12 h-12 rounded-full object-cover mr-4"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-neon">{chat.otherUser.username || chat.otherUser.name}</h3>
-                    <p className="text-gray-400 text-sm">
-                      {chat.lastMessage ? (
-                        <>
-                          {chat.lastMessage.senderId === chat.members.find(id => id !== chat.otherUser._id) ? 'You: ' : ''}
-                          {chat.lastMessage.text}
-                        </>
-                      ) : (
-                        'No messages yet'
-                      )}
-                    </p>
-                  </div>
-                  <div className="text-gray-500 text-xs">
-                    {chat.lastMessage && new Date(chat.lastMessage.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+
+            {unread > 0 && (
+              <div className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {unread > 4 ? "4+" : unread}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

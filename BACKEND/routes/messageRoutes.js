@@ -1,54 +1,51 @@
 const router = require("express").Router();
 const Message = require("../models/Message");
-const mongoose = require("mongoose");
+const Chat = require("../models/Chat");
+const auth = require("../middleware/authMiddleware");
 
-// add message
-router.post("/", async (req, res) => {
-  try {
-    const { senderId, chatId, text } = req.body;
+router.post("/", auth, async (req, res) => {
+  const { chatId, text } = req.body;
 
-    // ✅ validate senderId
-    if (!mongoose.Types.ObjectId.isValid(senderId)) {
-      return res.status(400).json({
-        error: "Invalid senderId. Must be a MongoDB ObjectId",
-      });
-    }
+  const message = await Message.create({
+    chatId,
+    sender: req.user.id,
+    text,
+  });
 
-    // (optional but recommended)
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return res.status(400).json({
-        error: "Invalid chatId",
-      });
-    }
-
-    const newMessage = new Message({
-      senderId,
-      chatId,
-      text,
-    });
-
-    const savedMessage = await newMessage.save();
-    res.status(200).json(savedMessage);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to send message" });
+  const chat = await Chat.findById(chatId);
+  const otherMember = chat.members.find(m => m.toString() !== req.user.id.toString());
+  if (otherMember) {
+    const currentUnread = chat.unreadCounts.get(otherMember.toString()) || 0;
+    chat.unreadCounts.set(otherMember.toString(), currentUnread + 1);
+    await chat.save();
   }
+
+  await Chat.findByIdAndUpdate(chatId, {
+    lastMessage: {
+      text,
+      sender: req.user.id,
+    },
+    updatedAt: Date.now(),
+  });
+
+  res.status(201).json(message);
 });
 
-// get messages
-router.get("/:chatId", async (req, res) => {
-  try {
-    const { chatId } = req.params;
+router.get("/:chatId", auth, async (req, res) => {
+  const messages = await Message.find({
+    chatId: req.params.chatId,
+  }).sort({ createdAt: 1 });
 
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return res.status(400).json({ error: "Invalid chatId" });
-    }
+  res.json(messages);
+});
 
-    const messages = await Message.find({ chatId });
-    res.status(200).json(messages);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch messages" });
+router.post("/:chatId/read", auth, async (req, res) => {
+  const chat = await Chat.findById(req.params.chatId);
+  if (chat) {
+    chat.unreadCounts.set(req.user.id.toString(), 0);
+    await chat.save();
   }
+  res.status(200).json({ success: true });
 });
 
 module.exports = router;
