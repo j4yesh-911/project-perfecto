@@ -1,6 +1,5 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "../pages/Home";
-// import Auth from "../pages/Auth";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
@@ -9,6 +8,7 @@ import Profile from "../pages/Profile";
 import Chat from "../pages/Chat";
 import ChatsList from "../pages/ChatsList";
 import CompleteProfile from "../pages/CompleteProfile";
+
 
 
 export default function AppRoutes() {
@@ -24,6 +24,7 @@ export default function AppRoutes() {
       <Route path="/chat/:userId" element={<Chat/>}/>
       <Route path="/chats" element={<ChatsList/>}/>
       <Route path="/complete-profile" element={<CompleteProfile />} />
+      <Route path="/match" element={<Match />} />
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );

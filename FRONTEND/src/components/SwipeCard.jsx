@@ -6,6 +6,7 @@ import API from "../services/api";
 export default function SwipeCard({ user, onAction }) {
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   if (!user) return null;
 
@@ -50,6 +51,7 @@ export default function SwipeCard({ user, onAction }) {
 
   const handleDragEnd = (event, info) => {
     setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
     const threshold = 100;
     if (info.offset.x > threshold) {
       handleLike();
@@ -58,17 +60,36 @@ export default function SwipeCard({ user, onAction }) {
     }
   };
 
+  const handleDrag = (event, info) => {
+    setDragOffset(info.offset);
+  };
+
   return (
     <motion.div
       drag="x"
       dragConstraints={{ left: -200, right: 200 }}
       onDragStart={() => setIsDragging(true)}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      animate={{ rotate: isDragging ? 0 : 0 }} // Optional: add rotation
+      animate={{
+        rotate: dragOffset.x * 0.1,
+        scale: isDragging ? 1.05 : 1
+      }}
       className="w-80 h-96 rounded-2xl bg-white/10 backdrop-blur-xl
                  border border-white/20 shadow-lg
-                 flex flex-col items-center p-6 relative"
+                 flex flex-col items-center p-6 relative overflow-hidden"
     >
+      {/* LIKE/NOPE Overlays */}
+      {dragOffset.x > 50 && (
+        <div className="absolute top-8 right-8 text-4xl font-bold text-green-500 rotate-12 border-4 border-green-500 rounded-lg px-4 py-2">
+          LIKE
+        </div>
+      )}
+      {dragOffset.x < -50 && (
+        <div className="absolute top-8 left-8 text-4xl font-bold text-red-500 -rotate-12 border-4 border-red-500 rounded-lg px-4 py-2">
+          NOPE
+        </div>
+      )}
       {/* 👤 Profile Image */}
       <img
         src={avatar}
