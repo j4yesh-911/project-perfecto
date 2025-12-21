@@ -72,38 +72,8 @@ export default function Chat() {
   };
 
   return (
-    <div
-      className="h-screen w-full flex flex-col text-white relative"
-      style={
-        userBg
-          ? {
-              backgroundImage: `url(${userBg})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
-          : {
-              background:
-                "linear-gradient(180deg, #0f172a 0%, #020617 100%)",
-            }
-      }
-    >
-      {/* OVERLAY */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      {/* BACK BUTTON */}
-      <button
-        onClick={() => navigate("/chats")}
-        className="absolute top-4 left-4 z-20 w-9 h-9 rounded-full bg-white/10 
-                   hover:bg-white/20 active:scale-95 transition-all duration-200
-                   flex items-center justify-center"
-      >
-        ←
-      </button>
-
-      {/* VIDEO ROOM */}
-      {videoOpen && (
-        <VideoRoom isCaller={true} onClose={() => setVideoOpen(false)} />
-      )}
+    <div className="h-screen bg-black text-white flex flex-col">
+      {videoOpen && <VideoRoom isCaller={true} />}
 
       {/* MESSAGES */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">

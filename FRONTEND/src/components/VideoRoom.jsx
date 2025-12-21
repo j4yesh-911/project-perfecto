@@ -9,11 +9,9 @@ import {
   handleOffer,
   handleAnswer,
   addIceCandidate,
-  endCall as endWebRTCCall,
-  endCall,
 } from "../services/webrtc";
 
-export default function VideoRoom({ isCaller, onEnd, onClose }) {
+export default function VideoRoom({ isCaller }) {
   const localVideo = useRef();
   const remoteVideo = useRef();
   // const ringtone = useRef(); // REMOVED: using fallback beep instead
@@ -144,227 +142,23 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
       socket.off("callEnd");
       socket.off("callDeclined");
     };
-  }, [isCaller, socket, chatId]);
-
-  const playFallbackRingtone = () => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-      
-      console.log("🔊 Playing fallback beep sound");
-    } catch (error) {
-      console.error("Fallback ringtone failed:", error);
-    }
-  };
-
-  const endCall = () => {
-    // Notify other user that call has ended
-    socket.emit("callEnd", { chatId });
-    
-    // Stop streams and close connection
-    endWebRTCCall();
-    handleEnd();
-  };
-
-  const answerCall = async () => {
-    console.log("📞 Answering call");
-    // Ringtone is handled by fallback beep which is short
-    
-    // Clear incoming call notification
-    clearIncomingCall();
-    
-    // Handle the pending offer
-    if (pendingOffer) {
-      await handleOffer(socket, chatId, pendingOffer);
-      setPendingOffer(null);
-      setCallStatus('active');
-    }
-  };
-
-  const declineCall = () => {
-    console.log("📞 Declining call");
-    // Ringtone is handled by fallback beep which is short
-    // Clear incoming call notification
-    clearIncomingCall();
-    // Clear any pending offer
-    setPendingOffer(null);
-    // Notify caller that call was declined
-    socket.emit("callDeclined", { chatId });
-    setCallStatus('ended');
-    handleEnd();
-  };
-
-  const retryCall = async () => {
-    setCallStatus('connecting');
-    setErrorMessage('');
-
-    try {
-      // 1️⃣ Start camera FIRST
-      await startLocalStream(localVideo);
-
-      // 2️⃣ Create peer AFTER stream exists
-      await createPeerConnection(socket, chatId, remoteVideo);
-
-      // 3️⃣ Caller creates offer
-      if (isCaller) {
-        console.log("📞 Creating offer");
-        await createOffer(socket, chatId);
-      }
-    } catch (error) {
-      console.error("Error retrying video call:", error);
-      setCallStatus('error');
-      setErrorMessage(error.message || "Failed to start video call. Please try again.");
-    }
-  };
+  }, [isCaller]);
 
   return (
-    <div className="relative w-full h-screen bg-black">
-      {/* Incoming Call Screen */}
-      {callStatus === 'incoming' && (
-        <div className="flex flex-col items-center justify-center h-full text-white">
-          <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-gray-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Incoming Call</h2>
-            <p className="text-gray-300">Someone is calling you...</p>
-          </div>
-          
-          <div className="flex space-x-6">
-            <button 
-              onClick={declineCall}
-              className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-            >
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2.22 2.22a.75.75 0 0 1 1.06 0L10 8.94l6.72-6.72a.75.75 0 1 1 1.06 1.06L11.06 10l6.72 6.72a.75.75 0 0 1-1.06 1.06L10 11.06l-6.72 6.72a.75.75 0 0 1-1.06-1.06L8.94 10 2.22 3.28a.75.75 0 0 0-1.06-1.06z" />
-              </svg>
-            </button>
-            
-            <button 
-              onClick={async () => {
-                try {
-                  await answerCall();
-                } catch (error) {
-                  console.error("Error answering call:", error);
-                }
-              }}
-              className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
-            >
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2.22 2.22a.75.75 0 0 1 1.06 0L10 8.94l6.72-6.72a.75.75 0 0 1 1.06 1.06L11.06 10l6.72 6.72a.75.75 0 0 1-1.06 1.06L10 11.06l-6.72 6.72a.75.75 0 0 1-1.06-1.06L8.94 10 2.22 3.28a.75.75 0 0 0-1.06-1.06z" transform="rotate(45 10 10)" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Connecting Screen */}
-      {callStatus === 'connecting' && (
-        <div className="flex flex-col items-center justify-center h-full text-white">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold">Connecting...</h2>
-            <p className="text-gray-300 mt-2">Setting up your call</p>
-          </div>
-          <button onClick={endCall} className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-lg font-semibold">
-            End Call
-          </button>
-        </div>
-      )}
-
-      {/* Error Screen */}
-      {callStatus === 'error' && (
-        <div className="flex flex-col items-center justify-center h-full text-white">
-          <div className="text-center max-w-md mx-auto px-4">
-            <div className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-4">Call Failed</h2>
-            <p className="text-gray-300 mb-6">{errorMessage}</p>
-            <div className="flex space-x-4 justify-center">
-              <button
-                onClick={retryCall}
-                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
-              >
-                Retry
-              </button>
-              <button
-                onClick={handleEnd}
-                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Active Call Screen */}
-      {callStatus === 'active' && (
-        <>
-          <video
-            ref={remoteVideo}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          <video
-            ref={localVideo}
-            autoPlay
-            playsInline
-            muted
-            className="absolute top-4 right-4 w-32 h-24 rounded-lg border-2 border-white"
-          />
-          <button onClick={endCall} className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-lg font-semibold">
-            End Call
-          </button>
-        </>
-      )}
-
-      {/* Call Ended Screen */}
-      {callStatus === 'ended' && (
-        <div className="flex flex-col items-center justify-center h-full text-white">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gray-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2.22 2.22a.75.75 0 0 1 1.06 0L10 8.94l6.72-6.72a.75.75 0 0 1 1.06 1.06L11.06 10l6.72 6.72a.75.75 0 0 1-1.06 1.06L10 11.06l-6.72 6.72a.75.75 0 0 1-1.06-1.06L8.94 10 2.22 3.28a.75.75 0 0 0-1.06-1.06z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold">Call Ended</h2>
-            <p className="text-gray-300 mt-2">The call has been disconnected</p>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden audio element for ringtone */}
-      {/* Hidden audio element for ringtone - REMOVED: using fallback beep instead */}
-      {/* <audio 
-        ref={ringtone} 
-        src="http://localhost:5000/ringtone.mp3" 
-        loop 
-        preload="auto"
-        onError={(e) => console.error("Audio load error:", e)}
-        onLoadStart={() => console.log("Audio loading started")}
-        onCanPlay={() => console.log("Audio can play")}
-        onLoadedData={() => console.log("Audio loaded")}
-      /> */}
+    <div className="flex gap-4 p-4 bg-black">
+      <video
+        ref={localVideo}
+        autoPlay
+        playsInline
+        muted
+        className="w-1/2 rounded-lg border"
+      />
+      <video
+        ref={remoteVideo}
+        autoPlay
+        playsInline
+        className="w-1/2 rounded-lg border"
+      />
     </div>
   );
 }
