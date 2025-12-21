@@ -8,9 +8,10 @@ import {
   handleOffer,
   handleAnswer,
   addIceCandidate,
+  endCall,
 } from "../services/webrtc";
 
-export default function VideoRoom({ isCaller }) {
+export default function VideoRoom({ isCaller, onClose }) {
   const localVideo = useRef();
   const remoteVideo = useRef();
   const socket = getSocket();
@@ -52,21 +53,38 @@ export default function VideoRoom({ isCaller }) {
     };
   }, [isCaller]);
 
+  const handleEndCall = () => {
+    endCall();
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="flex gap-4 p-4 bg-black">
-      <video
-        ref={localVideo}
-        autoPlay
-        playsInline
-        muted
-        className="w-1/2 rounded-lg border"
-      />
-      <video
-        ref={remoteVideo}
-        autoPlay
-        playsInline
-        className="w-1/2 rounded-lg border"
-      />
+    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      <div className="flex gap-4 p-4 flex-1">
+        <video
+          ref={localVideo}
+          autoPlay
+          playsInline
+          muted
+          className="w-1/2 rounded-lg border"
+        />
+        <video
+          ref={remoteVideo}
+          autoPlay
+          playsInline
+          className="w-1/2 rounded-lg border"
+        />
+      </div>
+      <div className="p-4 flex justify-center">
+        <button
+          onClick={handleEndCall}
+          className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-lg font-semibold text-white shadow-lg transition-colors"
+        >
+          End Call
+        </button>
+      </div>
     </div>
   );
 }
