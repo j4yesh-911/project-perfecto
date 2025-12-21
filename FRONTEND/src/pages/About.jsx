@@ -114,7 +114,7 @@ export default function About() {
               </div>
               <h3 className="text-2xl font-semibold mb-2">Jayesh Gayri</h3>
               <p className="text-gray-300 mb-4">Full Stack Developer</p>
-              <p className="text-sm text-gray-400">Passionate about creating innovative solutions and user-centric applications.</p>
+              <p className="text-sm text-gray-400">Passionate about creating innovative, user-centric applications while effectively leading and managing team efforts in group projects.</p>
             </motion.div>
 
             <motion.div
@@ -125,8 +125,8 @@ export default function About() {
                 HS
               </div>
               <h3 className="text-2xl font-semibold mb-2">Haridrumad Singh Jhala</h3>
-              <p className="text-gray-300 mb-4">Frontend Developer</p>
-              <p className="text-sm text-gray-400">Expert in creating beautiful and responsive user interfaces with modern technologies.</p>
+              <p className="text-gray-300 mb-4">Full Stack Developer</p>
+              <p className="text-sm text-gray-400">Specialist in frontend development with a strong focus on responsive design, performance optimization, and modern UI frameworks.</p>
             </motion.div>
 
             <motion.div
@@ -137,8 +137,8 @@ export default function About() {
                 PJ
               </div>
               <h3 className="text-2xl font-semibold mb-2">Pankaj Joshi</h3>
-              <p className="text-gray-300 mb-4">Backend Developer</p>
-              <p className="text-sm text-gray-400">Specialized in building robust server architectures and scalable APIs.</p>
+              <p className="text-gray-300 mb-4">Full Stack Developer</p>
+              <p className="text-sm text-gray-400">Experienced backend developer with expertise in scalable API development, server-side architecture, and Git/GitHub repository management.</p>
             </motion.div>
           </div>
         </motion.div>
