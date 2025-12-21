@@ -9,42 +9,59 @@ import {
   handleOffer,
   handleAnswer,
   addIceCandidate,
+  endCall,
 } from "../services/webrtc";
 
-export default function VideoRoom({ isCaller }) {
+export default function VideoRoom({ isCaller, onEnd, onClose }) {
   const localVideo = useRef();
   const remoteVideo = useRef();
-  // const ringtone = useRef(); // REMOVED: using fallback beep instead
   const socket = getSocket();
   const { chatId } = useParams();
   const { clearIncomingCall } = useIncomingCall();
 
-  // Use onEnd if provided, otherwise use onClose as fallback
   const handleEnd = onEnd || onClose || (() => {});
+
+  const [callStatus, setCallStatus] = useState('connecting');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [pendingOffer, setPendingOffer] = useState(null);
+
+  const playFallbackRingtone = () => {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  };
+
+  const endWebRTCCall = () => {
+    try {
+      endCall();
+    } catch (error) {
+      console.error("Error ending call:", error);
+    }
+  };
 
   const [callStatus, setCallStatus] = useState('connecting'); // 'connecting', 'incoming', 'active', 'ended', 'error'
   const [errorMessage, setErrorMessage] = useState('');
   const [pendingOffer, setPendingOffer] = useState(null); // Store pending offer for receiver
 
   useEffect(() => {
-    // Clear any incoming call notification when VideoRoom mounts
-    clearIncomingCall();
-    
-    // Set initial call status
-    if (!isCaller) {
-      setCallStatus('incoming');
-    } else {
-      setCallStatus('connecting');
-    }
-
     const init = async () => {
-      console.log("🎥 Starting video call, isCaller:", isCaller);
-      try {
-        // 1️⃣ Start camera FIRST
-        await startLocalStream(localVideo);
+      // 1️⃣ Start camera FIRST
+      await startLocalStream(localVideo);
 
-        // 2️⃣ Create peer AFTER stream exists
-        await createPeerConnection(socket, chatId, remoteVideo);
+      // 2️⃣ Create peer AFTER stream exists
+      createPeerConnection(socket, chatId, remoteVideo);
 
         // 3️⃣ Caller creates offer
         if (isCaller) {
@@ -96,15 +113,9 @@ export default function VideoRoom({ isCaller }) {
           }
         });
 
-        socket.on("webrtcAnswer", async (answer) => {
-          console.log("📨 Received answer");
-          await handleAnswer(answer);
-          
-          // For caller, call is now active after receiving answer
-          if (isCaller) {
-            setCallStatus('active');
-          }
-        });
+    socket.on("webrtcAnswer", async (answer) => {
+      await handleAnswer(answer);
+    });
 
         socket.on("iceCandidate", async (candidate) => {
           console.log("🧊 Received ICE candidate");

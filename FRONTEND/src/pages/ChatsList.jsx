@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
-import { getSocket } from "../services/socket";
-import { useUnreadMessages } from "../context/UnreadMessagesContext";
+import { getSocket } from "../services/socket"; // ✅ CHANGE
 
 export default function ChatsList() {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
-  const { chatsUnreadCounts } = useUnreadMessages();
 
-  const socket = getSocket();
+  const socket = getSocket(); // ✅ SINGLE SOCKET
 
   const myId = JSON.parse(
     atob(localStorage.getItem("token").split(".")[1])
@@ -40,7 +38,10 @@ export default function ChatsList() {
                     sender: message.sender,
                   },
                   updatedAt: message.createdAt || new Date().toISOString(),
-                  members: c.members.map(u => u._id === message.sender ? { ...u, lastSeen: new Date() } : u),
+                  unreadCounts: {
+                    ...c.unreadCounts,
+                    [myId]: (c.unreadCounts?.[myId] || 0) + 1,
+                  },
                 }
               : c
           );
@@ -77,7 +78,7 @@ export default function ChatsList() {
           (u) => u._id !== myId
         );
 
-        const unread = chatsUnreadCounts[chat._id] || 0;
+        const unread = chat.unreadCounts?.[myId] || 0;
         const previewText = unread > 4 ? "4+ messages" : chat.lastMessage?.text || "Start a conversation";
 
         return (
@@ -93,9 +94,6 @@ export default function ChatsList() {
 
             <div className="flex-1">
               <p className="font-semibold">{otherUser?.name}</p>
-              <p className="text-xs dark:text-gray-500 light:text-gray-400">
-                Last seen {otherUser?.lastSeen ? new Date(otherUser.lastSeen).toLocaleString() : 'never'}
-              </p>
               <p className="text-sm dark:text-gray-400 light:text-gray-600 truncate">
                 {previewText}
               </p>
