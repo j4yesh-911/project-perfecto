@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import SwipeCard from "../components/SwipeCard";
@@ -6,52 +7,48 @@ import SwipeCard from "../components/SwipeCard";
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null); // ✅ missing
   const [usernameFilter, setUsernameFilter] = useState("");
   const [skillsFilter, setSkillsFilter] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("No token found. Please login again.");
-        return;
-      }
-
+    const fetchData = async () => {
       try {
-        const res = await API.get("/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const [meRes, usersRes] = await Promise.all([
+          API.get("/auth/me"),
+          API.get("/users"),
+        ]);
 
-        setUsers(res.data);
+        setCurrentUserId(meRes.data._id);
+        setUsers(usersRes.data.filter(u => u._id !== meRes.data._id));
       } catch (err) {
-        console.error(err);
-        alert(err.response?.data?.msg || "Unauthorized");
+        alert("Failed to load users");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchData(); // ✅ FIX HERE
   }, []);
+
+  const handleOpenChat = (chatId) => {
+    navigate(`/chat/${chatId}`);
+  };
 
   // Filter users based on username and skills
   const filteredUsers = users.filter((user) => {
     // Filter by username (case-insensitive)
     const matchesUsername = usernameFilter === "" || 
-      (user.username && user.username.toLowerCase().includes(usernameFilter.toLowerCase())) ||
-      (user.name && user.name.toLowerCase().includes(usernameFilter.toLowerCase()));
-
-    // Filter by skills (match inside skillsToTeach array, case-insensitive)
+      (user.username || user.name || "").toLowerCase().includes(usernameFilter.toLowerCase());
+    
+    // Filter by skills (match inside skillsToTeach array)
     const matchesSkills = skillsFilter === "" || 
-      (user.skillsToTeach && user.skillsToTeach.some(skill => 
+      (user.skillsToTeach || []).some(skill => 
         skill.toLowerCase().includes(skillsFilter.toLowerCase())
-      ));
-
-    // Both filters must match
+      );
+    
+    // Both filters must match (AND logic)
     return matchesUsername && matchesSkills;
   });
 

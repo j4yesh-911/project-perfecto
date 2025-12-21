@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { getSocket } from "../services/socket";
 import VideoRoom from "../components/VideoRoom";
 import { useUnreadMessages } from "../context/UnreadMessagesContext";
@@ -8,6 +9,7 @@ export default function Chat() {
   const { chatId } = useParams();
   const socket = getSocket();
   const { markChatAsRead } = useUnreadMessages();
+  const navigate = useNavigate();
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -19,9 +21,12 @@ export default function Chat() {
   const typingTimeoutRef = useRef(null);
 
   const myId = JSON.parse(
-    atob(localStorage.getItem("token").split(".")[1])
+    atob(window.localStorage.getItem("token").split(".")[1])
   ).id;
 
+  const userBg = window.localStorage.getItem("chat_bg");
+
+  /* SOCKET */
   useEffect(() => {
     if (!chatId) return;
 
@@ -32,73 +37,20 @@ export default function Chat() {
 
       setMessages((prev) => {
         if (prev.some((m) => m._id === msg._id)) return prev;
-        const newMessages = [...prev, msg];
-        // Mark as delivered
-        fetch(`http://localhost:5000/api/messages/delivered`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({ messageIds: [msg._id] }),
-        });
-        return newMessages;
+        return [...prev, msg];
       });
     };
 
     socket.on("receiveMessage", handler);
 
-    // Incoming call
-    const callHandler = () => {
-      setIsCaller(false);
-      setVideoOpen(true);
-    };
-
-    socket.on("webrtcOffer", callHandler);
-
-    // Typing indicators
-    const typingStartHandler = (data) => {
-      if (data.chatId === chatId && data.userId !== myId) {
-        setOtherUserTyping(true);
-      }
-    };
-
-    const typingStopHandler = (data) => {
-      if (data.chatId === chatId && data.userId !== myId) {
-        setOtherUserTyping(false);
-      }
-    };
-
-    socket.on("typingStart", typingStartHandler);
-    socket.on("typingStop", typingStopHandler);
-
-    // Message status updates
-    const statusUpdateHandler = (data) => {
-      if (data.chatId === chatId) {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            data.messageIds.includes(msg._id) ? { ...msg, status: data.status } : msg
-          )
-        );
-      }
-    };
-
-    socket.on("messageStatusUpdate", statusUpdateHandler);
-
-    return () => {
-      socket.off("receiveMessage", handler);
-      socket.off("webrtcOffer", callHandler);
-      socket.off("typingStart", typingStartHandler);
-      socket.off("typingStop", typingStopHandler);
-      socket.off("messageStatusUpdate", statusUpdateHandler);
-      stopTyping(); // Stop typing when leaving chat
-    };
+    return () => socket.off("receiveMessage", handler);
   }, [chatId]);
 
+  /* FETCH OLD MESSAGES */
   useEffect(() => {
     fetch(`http://localhost:5000/api/messages/${chatId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${window.localStorage.getItem("token")}`,
       },
     })
       .then((res) => res.json())
@@ -125,6 +77,7 @@ export default function Chat() {
     };
   }, []);
 
+  /* AUTO SCROLL */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -171,48 +124,23 @@ export default function Chat() {
   };
 
   return (
-    <div className="h-screen dark:bg-black dark:text-white light:bg-white light:text-black flex flex-col">
-      {videoOpen && <VideoRoom isCaller={isCaller} onEnd={() => setVideoOpen(false)} />}
+    <div className="h-screen bg-black text-white flex flex-col">
+      {videoOpen && <VideoRoom isCaller={true} />}
 
-      <div
-        className="flex-1 overflow-y-auto p-4 space-y-2"
-        style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          backgroundAttachment: 'fixed'
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {messages.map((m) => {
           const isMine = String(m.sender) === String(myId);
-          const isSystem = m.type === 'system';
-          
-          if (isSystem) {
-            return (
-              <div key={m._id} className="flex justify-center my-2">
-                <div className="px-3 py-1 rounded-full bg-gray-500/80 backdrop-blur-sm text-white text-sm text-center max-w-xs">
-                  {m.text}
-                </div>
-              </div>
-            );
-          }
-          
           return (
             <div
               key={m._id}
               className={`flex ${isMine ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`px-4 py-2 rounded-lg max-w-xs backdrop-blur-sm ${
-                  isMine ? "bg-blue-500/90 text-white" : "dark:bg-white/20 dark:text-white light:bg-gray-200/90 light:text-black"
+                className={`px-4 py-2 rounded-lg max-w-xs ${
+                  isMine ? "bg-blue-500" : "bg-white/10"
                 }`}
               >
                 {m.text}
-                {isMine && (
-                  <div className="flex justify-end mt-1">
-                    {m.status === 'sent' && <span className="text-gray-400">✓</span>}
-                    {m.status === 'delivered' && <span className="text-gray-400">✓✓</span>}
-                    {m.status === 'read' && <span className="text-blue-400">✓✓</span>}
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -220,13 +148,7 @@ export default function Chat() {
         <div ref={bottomRef} />
       </div>
 
-      {otherUserTyping && (
-        <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 italic bg-black/20 backdrop-blur-sm rounded-lg mx-4">
-          typing...
-        </div>
-      )}
-
-      <div className="p-4 flex gap-2 dark:border-t dark:border-white/10 light:border-t light:border-gray-300">
+      <div className="p-4 flex gap-2 border-t border-white/10">
         <button
           onClick={() => setVideoOpen(true)}
           className="px-4 bg-green-500 rounded-lg"
@@ -235,11 +157,9 @@ export default function Chat() {
         </button>
 
         <input
-          id="message-input"
-          name="message"
           value={text}
-          onChange={handleInputChange}
-          className="flex-1 p-3 rounded-lg dark:bg-white/10 dark:text-white light:bg-gray-100 light:text-black"
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 p-3 rounded-lg bg-white/10"
           placeholder="Message..."
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />

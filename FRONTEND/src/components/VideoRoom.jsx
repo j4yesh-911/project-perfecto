@@ -10,9 +10,10 @@ import {
   handleAnswer,
   addIceCandidate,
   endCall as endWebRTCCall,
+  endCall,
 } from "../services/webrtc";
 
-export default function VideoRoom({ isCaller, onEnd }) {
+export default function VideoRoom({ isCaller, onEnd, onClose }) {
   const localVideo = useRef();
   const remoteVideo = useRef();
   const ringtone = useRef();
@@ -222,6 +223,13 @@ export default function VideoRoom({ isCaller, onEnd }) {
     socket.emit("callDeclined", { chatId });
     setCallStatus('ended');
     onEnd();
+  };
+
+  const handleEndCall = () => {
+    endCall();
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
