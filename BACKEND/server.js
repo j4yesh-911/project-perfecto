@@ -39,7 +39,7 @@ app.use("/api/likes", likeRoutes);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"],
     methods: ["GET", "POST"],
   },
 });
@@ -67,14 +67,17 @@ io.on("connection", (socket) => {
 
 
 socket.on("webrtcOffer", ({ chatId, offer }) => {
+  console.log("📞 WebRTC offer received for chat:", chatId);
   socket.to(chatId).emit("webrtcOffer", offer);
 });
 
 socket.on("webrtcAnswer", ({ chatId, answer }) => {
+  console.log("📞 WebRTC answer received for chat:", chatId);
   socket.to(chatId).emit("webrtcAnswer", answer);
 });
 
 socket.on("iceCandidate", ({ chatId, candidate }) => {
+  console.log("🧊 ICE candidate received for chat:", chatId);
   socket.to(chatId).emit("iceCandidate", candidate);
 });
 
@@ -134,9 +137,12 @@ socket.on("typingStop", ({ chatId, userId }) => {
 
   socket.on("sendMessage", async ({ chatId, text }) => {
     const senderId = socket.userId;
-    if (!senderId) return;
+    if (!senderId) {
+      console.log("❌ No senderId - socket not authenticated");
+      return;
+    }
 
-    console.log("📨 sendMessage", { chatId, senderId, text });
+    console.log("📨 sendMessage received", { chatId, senderId, text });
 
     const message = await Message.create({
       chatId,
@@ -175,7 +181,13 @@ socket.on("typingStop", ({ chatId, userId }) => {
       createdAt: message.createdAt,
     });
 
-    console.log("📤 emitted to room", chatId);
+    console.log("📤 Message emitted to room", chatId, "with data:", {
+      _id: message._id,
+      chatId,
+      sender: senderId,
+      text,
+      type: "user"
+    });
   });
 });
 

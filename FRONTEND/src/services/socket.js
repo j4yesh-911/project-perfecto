@@ -4,6 +4,7 @@ let socket;
 
 export const getSocket = () => {
   if (!socket) {
+    console.log("🔌 Initializing socket connection...");
     socket = io("http://localhost:5000", {
       transports: ["websocket"],
     });
@@ -18,6 +19,11 @@ export const getSocket = () => {
     
     socket.on("connect_error", (error) => {
       console.error("🔌 Socket connection error:", error);
+    });
+
+    // Debug all events
+    socket.onAny((event, ...args) => {
+      console.log("🔌 Socket event received:", event, args);
     });
     
     // Authenticate with token

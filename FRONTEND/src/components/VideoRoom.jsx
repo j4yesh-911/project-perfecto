@@ -16,12 +16,16 @@ import {
 export default function VideoRoom({ isCaller, onEnd, onClose }) {
   const localVideo = useRef();
   const remoteVideo = useRef();
-  const ringtone = useRef();
+  // const ringtone = useRef(); // REMOVED: using fallback beep instead
   const socket = getSocket();
   const { chatId } = useParams();
   const { clearIncomingCall } = useIncomingCall();
 
-  const [callStatus, setCallStatus] = useState('connecting'); // 'connecting', 'incoming', 'active', 'ended'
+  // Use onEnd if provided, otherwise use onClose as fallback
+  const handleEnd = onEnd || onClose || (() => {});
+
+  const [callStatus, setCallStatus] = useState('connecting'); // 'connecting', 'incoming', 'active', 'ended', 'error'
+  const [errorMessage, setErrorMessage] = useState('');
   const [pendingOffer, setPendingOffer] = useState(null); // Store pending offer for receiver
 
   useEffect(() => {
@@ -59,15 +63,7 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
             
             // Play ringtone
             console.log("🎵 Attempting to play ringtone");
-            if (ringtone.current) {
-              ringtone.current.play().catch(err => {
-                console.error("Ringtone play failed:", err);
-                // Fallback: create a simple beep sound
-                playFallbackRingtone();
-              });
-            } else {
-              playFallbackRingtone();
-            }
+            playFallbackRingtone();
             
             // Show browser notification
             console.log("🔔 Attempting to show notification, permission:", Notification.permission);
@@ -119,29 +115,23 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
 
         socket.on("callEnd", () => {
           console.log("📞 Call ended by other user");
-          // Stop ringtone if playing
-          if (ringtone.current) {
-            ringtone.current.pause();
-            ringtone.current.currentTime = 0;
-          }
+          // Ringtone is handled by fallback beep which is short
           setCallStatus('ended');
           endWebRTCCall();
-          onEnd();
+          handleEnd();
         });
 
         socket.on("callDeclined", () => {
           console.log("📞 Call declined by receiver");
-          // Stop ringtone if playing
-          if (ringtone.current) {
-            ringtone.current.pause();
-            ringtone.current.currentTime = 0;
-          }
+          // Ringtone is handled by fallback beep which is short
           setCallStatus('ended');
           endWebRTCCall();
-          onEnd();
+          handleEnd();
         });
       } catch (error) {
         console.error("Error initializing video call:", error);
+        setCallStatus('error');
+        setErrorMessage(error.message || "Failed to start video call. Please try again.");
       }
     };
 
@@ -186,16 +176,12 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
     
     // Stop streams and close connection
     endWebRTCCall();
-    onEnd();
+    handleEnd();
   };
 
   const answerCall = async () => {
     console.log("📞 Answering call");
-    // Stop ringtone
-    if (ringtone.current) {
-      ringtone.current.pause();
-      ringtone.current.currentTime = 0;
-    }
+    // Ringtone is handled by fallback beep which is short
     
     // Clear incoming call notification
     clearIncomingCall();
@@ -210,11 +196,7 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
 
   const declineCall = () => {
     console.log("📞 Declining call");
-    // Stop ringtone
-    if (ringtone.current) {
-      ringtone.current.pause();
-      ringtone.current.currentTime = 0;
-    }
+    // Ringtone is handled by fallback beep which is short
     // Clear incoming call notification
     clearIncomingCall();
     // Clear any pending offer
@@ -222,13 +204,29 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
     // Notify caller that call was declined
     socket.emit("callDeclined", { chatId });
     setCallStatus('ended');
-    onEnd();
+    handleEnd();
   };
 
-  const handleEndCall = () => {
-    endCall();
-    if (onClose) {
-      onClose();
+  const retryCall = async () => {
+    setCallStatus('connecting');
+    setErrorMessage('');
+
+    try {
+      // 1️⃣ Start camera FIRST
+      await startLocalStream(localVideo);
+
+      // 2️⃣ Create peer AFTER stream exists
+      await createPeerConnection(socket, chatId, remoteVideo);
+
+      // 3️⃣ Caller creates offer
+      if (isCaller) {
+        console.log("📞 Creating offer");
+        await createOffer(socket, chatId);
+      }
+    } catch (error) {
+      console.error("Error retrying video call:", error);
+      setCallStatus('error');
+      setErrorMessage(error.message || "Failed to start video call. Please try again.");
     }
   };
 
@@ -289,6 +287,35 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
         </div>
       )}
 
+      {/* Error Screen */}
+      {callStatus === 'error' && (
+        <div className="flex flex-col items-center justify-center h-full text-white">
+          <div className="text-center max-w-md mx-auto px-4">
+            <div className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold mb-4">Call Failed</h2>
+            <p className="text-gray-300 mb-6">{errorMessage}</p>
+            <div className="flex space-x-4 justify-center">
+              <button
+                onClick={retryCall}
+                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Retry
+              </button>
+              <button
+                onClick={handleEnd}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Active Call Screen */}
       {callStatus === 'active' && (
         <>
@@ -327,7 +354,8 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
       )}
 
       {/* Hidden audio element for ringtone */}
-      <audio 
+      {/* Hidden audio element for ringtone - REMOVED: using fallback beep instead */}
+      {/* <audio 
         ref={ringtone} 
         src="http://localhost:5000/ringtone.mp3" 
         loop 
@@ -336,7 +364,7 @@ export default function VideoRoom({ isCaller, onEnd, onClose }) {
         onLoadStart={() => console.log("Audio loading started")}
         onCanPlay={() => console.log("Audio can play")}
         onLoadedData={() => console.log("Audio loaded")}
-      />
+      /> */}
     </div>
   );
 }
