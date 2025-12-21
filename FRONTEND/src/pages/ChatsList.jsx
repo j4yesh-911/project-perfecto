@@ -38,10 +38,6 @@ export default function ChatsList() {
                     sender: message.sender,
                   },
                   updatedAt: message.createdAt || new Date().toISOString(),
-                  unreadCounts: {
-                    ...c.unreadCounts,
-                    [myId]: (c.unreadCounts?.[myId] || 0) + 1,
-                  },
                 }
               : c
           );
@@ -66,7 +62,7 @@ export default function ChatsList() {
   }, []);
 
   return (
-    <div className="min-h-screen dark:bg-black dark:text-white light:bg-white light:text-black p-6">
+    <div className="min-h-screen bg-black text-white p-6">
       <h1 className="text-3xl mb-6 font-bold">Chats</h1>
 
       {chats.length === 0 && (
@@ -78,14 +74,11 @@ export default function ChatsList() {
           (u) => u._id !== myId
         );
 
-        const unread = chat.unreadCounts?.[myId] || 0;
-        const previewText = unread > 4 ? "4+ messages" : chat.lastMessage?.text || "Start a conversation";
-
         return (
           <div
             key={chat._id}
             onClick={() => navigate(`/chat/${chat._id}`)}
-            className="flex items-center gap-4 p-4 dark:hover:bg-white/10 light:hover:bg-gray-100 rounded-lg cursor-pointer relative"
+            className="flex items-center gap-4 p-4 hover:bg-white/10 rounded-lg cursor-pointer"
           >
             <img
               src={otherUser?.profilePic || "/avatar.png"}
@@ -94,16 +87,10 @@ export default function ChatsList() {
 
             <div className="flex-1">
               <p className="font-semibold">{otherUser?.name}</p>
-              <p className="text-sm dark:text-gray-400 light:text-gray-600 truncate">
-                {previewText}
+              <p className="text-sm text-gray-400 truncate">
+                {chat.lastMessage?.text || "Start a conversation"}
               </p>
             </div>
-
-            {unread > 0 && (
-              <div className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                {unread > 4 ? "4+" : unread}
-              </div>
-            )}
           </div>
         );
       })}

@@ -27,12 +27,7 @@ export default function Chat() {
     socket.emit("joinChat", chatId);
 
     const handler = (msg) => {
-      console.log("📨 Received message:", msg);
-      if (!msg || msg.chatId !== chatId) {
-        console.log("📨 Message filtered out - wrong chat or invalid");
-        return;
-      }
-      console.log("📨 Adding message to state");
+      if (!msg || msg.chatId !== chatId) return;
       setMessages((prev) =>
         prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]
       );
@@ -61,7 +56,6 @@ export default function Chat() {
   const sendMessage = () => {
     if (!text.trim()) return;
 
-    console.log("📤 Sending message:", { chatId, senderId: myId, text });
     socket.emit("sendMessage", {
       chatId,
       senderId: myId,
@@ -72,8 +66,38 @@ export default function Chat() {
   };
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col">
-      {videoOpen && <VideoRoom isCaller={true} />}
+    <div
+      className="h-screen w-full flex flex-col text-white relative"
+      style={
+        userBg
+          ? {
+              backgroundImage: `url(${userBg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : {
+              background:
+                "linear-gradient(180deg, #0f172a 0%, #020617 100%)",
+            }
+      }
+    >
+      {/* OVERLAY */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate("/chats")}
+        className="absolute top-4 left-4 z-20 w-9 h-9 rounded-full bg-white/10 
+                   hover:bg-white/20 active:scale-95 transition-all duration-200
+                   flex items-center justify-center"
+      >
+        ←
+      </button>
+
+      {/* VIDEO ROOM */}
+      {videoOpen && (
+        <VideoRoom isCaller={true} onClose={() => setVideoOpen(false)} />
+      )}
 
       {/* MESSAGES */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
@@ -122,7 +146,6 @@ export default function Chat() {
 
           {/* INPUT */}
           <input
-            name="message"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Write a message…"

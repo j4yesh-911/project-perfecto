@@ -4,7 +4,7 @@ import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
-import LiveSession from "../pages/Livesession";
+import LiveSession from "../pages/LiveSession";
 import Profile from "../pages/profile"; 
 import Chat from "../pages/Chat";
 import ChatsList from "../pages/ChatsList";
@@ -26,7 +26,7 @@ export default function AppRoutes() {
       <Route path="/chat/:chatId" element={<Chat />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/complete-profile" element={<CompleteProfile />} />
-      <Route path="/about" element={<About />} />
+      <Route path="/about" element ={<About />} />
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );

@@ -1,12 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import ThemeToggle from "./ThemeToggle";
-import { useUnreadMessages } from "../context/UnreadMessagesContext";
-import { useIncomingCall } from "../context/IncomingCallContext";
 
 export default function Navbar() {
-  const { totalUnread } = useUnreadMessages();
-  const { incomingCall, clearIncomingCall } = useIncomingCall();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -23,56 +19,41 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleAcceptCall = () => {
-    if (incomingCall) {
-      // Navigate to the chat and the VideoRoom will handle the rest
-      navigate(`/chat/${incomingCall.chatId}`);
-      clearIncomingCall();
-    }
-  };
-
-  const handleDeclineCall = () => {
-    // Emit decline event and clear notification
-    if (incomingCall) {
-      const socket = new (require("../services/socket")).getSocket();
-      socket.emit("callDeclined", { chatId: incomingCall.chatId });
-      clearIncomingCall();
-    }
-  };
+  // Incoming-call related hooks were removed; keep placeholder handlers
+  const handleAcceptCall = () => {};
+  const handleDeclineCall = () => {};
 
 const login = !!window.localStorage.getItem("token");
 
- const nav = useNavigate();
-
 const logoutfun = () =>{
   localStorage.removeItem("token")
-  nav("login")
+  navigate("/login")
   alert("logged out")
 }
 
 const handledashboard = ()=>{
   if(login){
-    nav("/dashboard");
+    navigate("/dashboard");
   }else{
-    nav("/login");
+    navigate("/login");
   }
 }
 
 
 const handlechat = ()=>{
   if(login){
-    nav("/chats");
+    navigate("/chats");
   }else{
-    nav("/login");
+    navigate("/login");
   }
 }
 
 
 const handleprofile = ()=>{
   if(login){
-    nav("/profile");
+    navigate("/profile");
   }else{
-    nav("/login");
+    navigate("/login");
   }
 }
 
@@ -81,7 +62,7 @@ const toggleDropdown = () => {
 };
 
 const handleAbout = () => {
-  nav("/about");
+  navigate("/about");
   setIsDropdownOpen(false);
 };
 
@@ -99,36 +80,7 @@ const handleSettingsLogout = () => {
 
   return (
     <>
-      {/* Incoming Call Notification */}
-      {incomingCall && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 dark:text-white">Incoming Call</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Someone is calling you...</p>
-              <div className="flex space-x-4 justify-center">
-                <button
-                  onClick={handleDeclineCall}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  Decline
-                </button>
-                <button
-                  onClick={handleAcceptCall}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  Accept
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Incoming-call UI removed: handled in VideoRoom or global provider */}
 
       <nav className="flex justify-between items-center px-8 py-4 glass relative">
         <h1 className="text-xl font-bold text-neon">SkillSwap</h1>
