@@ -13,7 +13,9 @@ export default function CompleteProfile() {
     age: "",
     gender: "",
     phone: "",
-    address: "",
+    location: "",
+    city: "",
+    state: "",
     skillsToTeach: "",
     skillsToLearn: "",
     profilePic: "",
@@ -110,6 +112,43 @@ export default function CompleteProfile() {
     setShowCamera(false);
   };
 
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Use reverse geocoding to get location name
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          const data = await response.json();
+          
+          const locationString = `${data.city || data.locality || ''}, ${data.principalSubdivision || data.countryCode || ''}`.trim();
+          setForm(prev => ({ ...prev, location: locationString || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+        } catch (error) {
+          console.error('Error getting location name:', error);
+          // Fallback to coordinates
+          setForm(prev => ({ ...prev, location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+        }
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        alert('Unable to retrieve your location. Please enter it manually.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -143,7 +182,7 @@ export default function CompleteProfile() {
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto glass p-8 rounded-2xl"
+        className="max-w-2xl mx-auto glass p-8 rounded-2xl max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-3xl font-bold text-center mb-8 text-neon">Complete Profile</h2>
 
@@ -222,23 +261,54 @@ export default function CompleteProfile() {
           </select>
         </div>
 
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2 text-neon">Phone</label>
+          <input
+            name="phone"
+            placeholder="Enter phone number"
+            value={form.phone}
+            onChange={handleChange}
+            className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2 text-neon">Address</label>
+          <div className="flex gap-2">
+            <input
+              name="location"
+              placeholder="Enter your location"
+              value={form.location}
+              onChange={handleChange}
+              className="flex-1 p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
+            />
+            <button
+              type="button"
+              onClick={detectLocation}
+              className="px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:opacity-90 transition text-white font-medium whitespace-nowrap"
+            >
+              📍 Detect Location
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium mb-2 text-neon">Phone</label>
+            <label className="block text-sm font-medium mb-2 text-neon">City</label>
             <input
-              name="phone"
-              placeholder="Enter phone number"
-              value={form.phone}
+              name="city"
+              placeholder="Enter your city"
+              value={form.city}
               onChange={handleChange}
               className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-neon">Address</label>
+            <label className="block text-sm font-medium mb-2 text-neon">State</label>
             <input
-              name="address"
-              placeholder="Enter address"
-              value={form.address}
+              name="state"
+              placeholder="Enter your state"
+              value={form.state}
               onChange={handleChange}
               className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
             />

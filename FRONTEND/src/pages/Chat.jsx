@@ -141,7 +141,7 @@ export default function Chat() {
                        active:scale-95 transition-all duration-200
                        flex items-center justify-center"
           >
-            📹
+            
           </button>
 
           {/* INPUT */}

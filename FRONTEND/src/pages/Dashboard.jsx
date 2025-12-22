@@ -59,7 +59,7 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Discover People</h1>
         <p className="text-gray-400 mb-8">
-          Connect, chat & exchange skills 🚀
+          Connect, chat & exchange skills 
         </p>
 
         {/* Filter Inputs */}

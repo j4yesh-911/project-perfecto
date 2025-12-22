@@ -18,7 +18,18 @@ const userSchema = new mongoose.Schema(
     age: Number,
     gender: String,
     phone: String,
-    address: String,
+    location: {
+      type: String,
+      default: "",
+    },
+    city: {
+      type: String,
+      default: "",
+    },
+    state: {
+      type: String,
+      default: "",
+    },
 
     skillsToTeach: [String],
     skillsToLearn: [String],

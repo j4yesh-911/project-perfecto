@@ -94,7 +94,7 @@ const handleChange = () => {
               }}
               className="px-12 py-4 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold text-xl rounded-2xl shadow-2xl border-2 border-white/20 backdrop-blur-sm"
             >
-              🚀 Entering...
+               Entering...
             </motion.button>
           </motion.div>
         )}

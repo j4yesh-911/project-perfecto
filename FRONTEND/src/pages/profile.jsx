@@ -129,7 +129,7 @@ export default function Profile() {
               onClick={handleEdit}
               className="px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
             >
-              ✏️ Edit Profile
+               Edit Profile
             </button>
           </div>
         )}
@@ -140,7 +140,7 @@ export default function Profile() {
               onClick={handleSave}
               className="px-6 py-2 bg-green-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
             >
-              💾 Save Changes
+               Save Changes
             </button>
             <button
               onClick={handleCancel}
