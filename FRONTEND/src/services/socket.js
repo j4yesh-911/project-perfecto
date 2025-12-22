@@ -4,9 +4,36 @@ let socket;
 
 export const getSocket = () => {
   if (!socket) {
+    console.log("🔌 Initializing socket connection...");
     socket = io("http://localhost:5000", {
       transports: ["websocket"],
     });
+    
+    socket.on("connect", () => {
+      console.log("🔌 Socket connected:", socket.id);
+    });
+    
+    socket.on("disconnect", (reason) => {
+      console.log("🔌 Socket disconnected:", reason);
+    });
+    
+    socket.on("connect_error", (error) => {
+      console.error("🔌 Socket connection error:", error);
+    });
+
+    // Debug all events
+    socket.onAny((event, ...args) => {
+      console.log("🔌 Socket event received:", event, args);
+    });
+    
+    // Authenticate with token
+    const token = localStorage.getItem("token");
+    if (token) {
+      socket.emit("authenticate", token);
+      console.log("🔐 Authentication sent");
+    } else {
+      console.log("⚠️ No token found for authentication");
+    }
   }
   return socket;
 };

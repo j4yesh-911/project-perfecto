@@ -7,6 +7,7 @@ const ChatSchema = new mongoose.Schema(
       text: String,
       sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     },
+    unreadCounts: { type: Map, of: Number, default: {} },
   },
   { timestamps: true }
 );
