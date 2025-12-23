@@ -76,6 +76,11 @@ const handleSettingsLogout = () => {
   setIsDropdownOpen(false);
 };
 
+const match = () => {
+navigate("/match")
+  setIsDropdownOpen(false);
+};
+
 
 
   return (
@@ -88,6 +93,8 @@ const handleSettingsLogout = () => {
           <Link to="/" className="hover:text-blue-400 transition-colors">Home</Link>
           <button onClick={handledashboard} className="hover:text-blue-400 transition-colors">Dashboard</button>
           <button onClick={handlechat} className="hover:text-blue-400 transition-colors">Chats</button>
+          <button onClick={match} className="hover:text-blue-400 transition-colors">match</button>
+          
 
           <ThemeToggle />
 
@@ -119,6 +126,8 @@ const handleSettingsLogout = () => {
                     </svg>
                     Profile
                   </button>
+
+
                   <button
                     onClick={handleAbout}
                     className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
