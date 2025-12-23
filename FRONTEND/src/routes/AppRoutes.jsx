@@ -10,6 +10,7 @@ import Chat from "../pages/Chat";
 import ChatsList from "../pages/ChatsList";
 import CompleteProfile from "../pages/CompleteProfile";
 import About from "../pages/About";
+import Match from "../pages/Match";
 
 
 
@@ -27,6 +28,7 @@ export default function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/about" element ={<About />} />
+      <Route path="/match" element={<Match />} />
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );
