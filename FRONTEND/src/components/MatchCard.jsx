@@ -1,18 +1,57 @@
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import API from "../services/api";
 
 export default function MatchCard({ user, index }) {
+  const [mySwappers, setMySwappers] = useState([]);
+  const [sentRequestIds, setSentRequestIds] = useState([]);
 
-const sendRequest = async () => {
-  await API.post("/swaps/send", {
-    toUser: user._id,
-    skillOffered: "React",
-    skillRequested: "Node",
-  });
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // 🔹 load logged-in user
+        const meRes = await API.get("/auth/me");
+        setMySwappers(
+          (meRes.data.swappers || []).map((u) => u._id.toString())
+        );
 
-  alert("Swap request sent");
-};
+        // 🔹 load SENT requests
+        const sentRes = await API.get("/swaps/sent");
+        setSentRequestIds(
+          sentRes.data.map((r) => r.toUser.toString())
+        );
 
+        console.log("MY SWAPPERS:", meRes.data.swappers);
+        console.log("SENT IDS:", sentRes.data);
+      } catch (err) {
+        console.error("Failed to load state", err);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const userId = user._id.toString();
+
+  const isAlreadySwapper = mySwappers.includes(userId);
+  const isSent = sentRequestIds.includes(userId);
+
+  const sendRequest = async () => {
+    if (isAlreadySwapper || isSent) return;
+
+    try {
+      await API.post("/swaps/send", {
+        toUser: userId,
+        skillOffered: "React",
+        skillRequested: "Node",
+      });
+
+      // 🔥 UI UPDATE GUARANTEED
+      setSentRequestIds((prev) => [...prev, userId]);
+    } catch (err) {
+      console.error("Send request failed:", err.response?.data || err);
+    }
+  };
 
   return (
     <motion.div
@@ -43,12 +82,28 @@ const sendRequest = async () => {
         <button className="flex-1 bg-cyan-500/20 p-2 rounded-lg">
           Chat
         </button>
+
         <button className="flex-1 bg-violet-500/20 p-2 rounded-lg">
           Video
         </button>
 
-        <button onClick={sendRequest}>SwapSkill</button>
-
+        {/* 🔥 FINAL UX – BUTTON COMPLETELY GONE */}
+        {isAlreadySwapper ? (
+          <span className="flex-1 text-green-500 text-sm flex items-center justify-center">
+            ✓ Swap Partner
+          </span>
+        ) : isSent ? (
+          <span className="flex-1 text-yellow-400 text-sm flex items-center justify-center">
+            ⏳ Request Sent
+          </span>
+        ) : (
+          <button
+            onClick={sendRequest}
+            className="flex-1 bg-emerald-500/20 p-2 rounded-lg"
+          >
+            SwapSkill
+          </button>
+        )}
       </div>
     </motion.div>
   );

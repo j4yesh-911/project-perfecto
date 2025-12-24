@@ -6,34 +6,60 @@ exports.sendSwapRequest = async (req, res) => {
   try {
     const { toUser, skillOffered, skillRequested } = req.body;
 
-    // check both users exist
-    const from = await User.findById(req.user.id);
-    const to = await User.findById(toUser);
+    const fromUser = await User.findById(req.user.id);
+    const targetUser = await User.findById(toUser);
 
-    if (!from || !to) {
+    if (!fromUser || !targetUser) {
       return res.status(400).json({ msg: "Invalid users" });
     }
 
-    const existing = await SwapRequest.findOne({
-      fromUser: from._id,
-      toUser: to._id,
-      status: "pending",
-    });
+    // 🚫 ALREADY SWAPPERS (FRIENDS) — FIXED
+    const alreadySwapper = fromUser.swappers.some(
+      (id) => id.toString() === toUser.toString()
+    );
 
-    if (existing) {
-      return res.status(400).json({ msg: "Request already sent" });
+    if (alreadySwapper) {
+      return res.status(400).json({
+        msg: "Already swap partners",
+      });
     }
 
+    // 🚫 PENDING REQUEST (ANY DIRECTION)
+    const pending = await SwapRequest.findOne({
+      $or: [
+        {
+          fromUser: fromUser._id,
+          toUser,
+          status: "pending",
+        },
+        {
+          fromUser: toUser,
+          toUser: fromUser._id,
+          status: "pending",
+        },
+      ],
+    });
+
+    if (pending) {
+      return res.status(400).json({
+        msg: "Swap request already pending",
+      });
+    }
+
+    // ✅ CREATE REQUEST
     const request = await SwapRequest.create({
-      fromUser: from._id,
-      toUser: to._id,
+      fromUser: fromUser._id,
+      toUser,
       skillOffered,
       skillRequested,
     });
 
-    res.status(201).json({ msg: "Swap request sent", request });
+    res.status(201).json({
+      msg: "Swap request sent",
+      request,
+    });
   } catch (err) {
-    console.error(err);
+    console.error("sendSwapRequest error:", err);
     res.status(500).json({ msg: "Failed to send request" });
   }
 };
@@ -65,7 +91,6 @@ exports.acceptRequest = async (req, res) => {
     const userA = await User.findById(request.fromUser);
     const userB = await User.findById(request.toUser);
 
-    // 🔥 MOST IMPORTANT CHECK
     if (!userA || !userB) {
       return res.status(400).json({
         msg: "One of the users does not exist",
@@ -103,5 +128,20 @@ exports.declineRequest = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to decline" });
+  }
+};
+
+
+// ================= GET MY SENT REQUESTS =================
+exports.getMySentRequests = async (req, res) => {
+  try {
+    const requests = await SwapRequest.find({
+      fromUser: req.user.id,
+      status: "pending",
+    }).select("toUser");
+
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ msg: "Failed to load sent requests" });
   }
 };
