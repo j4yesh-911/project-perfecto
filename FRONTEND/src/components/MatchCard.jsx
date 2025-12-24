@@ -1,6 +1,19 @@
 import { motion } from "framer-motion";
+import API from "../services/api";
 
 export default function MatchCard({ user, index }) {
+
+const sendRequest = async () => {
+  await API.post("/swaps/send", {
+    toUser: user._id,
+    skillOffered: "React",
+    skillRequested: "Node",
+  });
+
+  alert("Swap request sent");
+};
+
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -33,6 +46,9 @@ export default function MatchCard({ user, index }) {
         <button className="flex-1 bg-violet-500/20 p-2 rounded-lg">
           Video
         </button>
+
+        <button onClick={sendRequest}>SwapSkill</button>
+
       </div>
     </motion.div>
   );

@@ -36,6 +36,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/likes", likeRoutes);
+app.use("/api/swaps", require("./routes/swapRoutes"));
+
 
 const io = new Server(server, {
   cors: {

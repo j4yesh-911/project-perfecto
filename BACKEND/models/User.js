@@ -27,8 +27,17 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+     swappers:[
+  {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+],
   },
   { timestamps: true }
+
+
 );
 
 // Add indexes for better query performance

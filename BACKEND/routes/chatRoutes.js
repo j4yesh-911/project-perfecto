@@ -2,31 +2,47 @@ const router = require("express").Router();
 const Chat = require("../models/Chat");
 const auth = require("../middleware/authMiddleware");
 
+// CREATE OR GET CHAT
 router.post("/find-or-create", auth, async (req, res) => {
-  const { receiverId } = req.body;
-  const senderId = req.user.id;
+  try {
+    const { receiverId } = req.body;
+    const senderId = req.user.id;
 
-  let chat = await Chat.findOne({
-    members: { $all: [senderId, receiverId] },
-  });
+    if (!receiverId) {
+      return res.status(400).json({ msg: "receiverId required" });
+    }
 
-  if (!chat) {
-    chat = await Chat.create({
-      members: [senderId, receiverId],
+    let chat = await Chat.findOne({
+      members: { $all: [senderId, receiverId] },
     });
-  }
 
-  res.json(chat);
+    if (!chat) {
+      chat = await Chat.create({
+        members: [senderId, receiverId],
+      });
+    }
+
+    res.json(chat);
+  } catch (err) {
+    console.error("chat error:", err);
+    res.status(500).json({ msg: "Chat failed" });
+  }
 });
 
+// GET MY CHATS
 router.get("/", auth, async (req, res) => {
-  const chats = await Chat.find({
-    members: { $in: [req.user.id] },
-  })
-    .populate("members", "name profilePic")
-    .sort({ updatedAt: -1 });
+  try {
+    const chats = await Chat.find({
+      members: { $in: [req.user.id] },
+    })
+      .populate("members", "name profilePic")
+      .sort({ updatedAt: -1 });
 
-  res.json(chats);
+    res.json(chats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to load chats" });
+  }
 });
 
 module.exports = router;
