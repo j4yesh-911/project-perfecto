@@ -32,7 +32,6 @@ export default function Chat() {
     if (!chatId) return;
 
     socket.emit("joinChat", chatId);
-    socket.emit("markMessagesAsSeen", { chatId });
 
     const handler = (msg) => {
       if (!msg || msg.chatId !== chatId) return;

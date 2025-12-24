@@ -79,22 +79,11 @@ export default function ChatsList() {
       );
     };
 
-    // Handle message deletion
-    const handleMessageDeleted = ({ chatId, text: deletedText, isDeleted }) => {
-      setChats((prev) =>
-        prev.map((c) =>
-          c._id === chatId
-            ? {
-                ...c,
-                lastMessage: {
-                  ...c.lastMessage,
-                  text: deletedText,
-                  isDeleted,
-                },
-              }
-            : c
-        )
-      );
+    // Handle message deletion - reload chats to get updated last message
+    const handleMessageDeleted = async ({ chatId }) => {
+      // Reload chats to get the updated last message after deletion
+      const res = await API.get("/chats");
+      setChats(res.data);
     };
 
     socket.on("receiveMessage", handleReceive);

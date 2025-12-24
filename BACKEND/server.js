@@ -177,7 +177,7 @@ socket.on("typing", async ({ chatId }) => {
   // Broadcast typing event with user info
   socket.to(chatId).emit("typing", { chatId, userId: socket.userId });
   
-  // Auto-remove from typing after 5 seconds if no new event
+  // Auto-remove from typing after 3 seconds if no new event (match frontend)
   setTimeout(async () => {
     const updatedChat = await Chat.findById(chatId);
     if (updatedChat) {
@@ -186,7 +186,7 @@ socket.on("typing", async ({ chatId }) => {
       );
       await updatedChat.save();
     }
-  }, 5000);
+  }, 3000);
 });
 
 socket.on("stopTyping", async ({ chatId }) => {
