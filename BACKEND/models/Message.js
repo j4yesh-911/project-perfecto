@@ -5,6 +5,19 @@ const MessageSchema = new mongoose.Schema(
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     text: { type: String, required: true },
+    status: { 
+      type: String, 
+      enum: ["sent", "delivered", "seen"], 
+      default: "sent" 
+    },
+    readBy: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        readAt: { type: Date, default: Date.now }
+      }
+    ],
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
   },
   { timestamps: true }
 );

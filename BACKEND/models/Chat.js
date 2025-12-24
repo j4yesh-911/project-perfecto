@@ -6,8 +6,10 @@ const ChatSchema = new mongoose.Schema(
     lastMessage: {
       text: String,
       sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      isDeleted: { type: Boolean, default: false },
     },
     unreadCounts: { type: Map, of: Number, default: {} },
+    typingUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
