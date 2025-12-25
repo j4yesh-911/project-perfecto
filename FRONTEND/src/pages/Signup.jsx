@@ -15,7 +15,7 @@
 //   const handleSignup = async (e) => {
 //     e.preventDefault();
 //     try {
-//       // 🔥 FIXED API ROUTE
+//       //  FIXED API ROUTE
 //       const res = await API.post("/auth/signup", data);
 
 //       alert(res.data.msg || "Signup successful");
@@ -28,7 +28,7 @@
 //   return (
 //     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-//       {/* 🌌 BACKGROUND IMAGE */}
+//       {/*  BACKGROUND IMAGE */}
 //       <div
 //         className="absolute inset-0 bg-cover bg-center scale-110"
 //         style={{
@@ -37,7 +37,7 @@
 //         }}
 //       />
 
-//       {/* 🎨 Animated Gradient Overlay */}
+//       {/*  Animated Gradient Overlay */}
 //       <motion.div
 //         initial={{ opacity: 0 }}
 //         animate={{ opacity: 1 }}
@@ -45,7 +45,7 @@
 //         className="absolute inset-0 bg-gradient-to-br from-black/80 via-slate-900/80 to-black/90"
 //       />
 
-//       {/* 💎 Glass Card */}
+//       {/*  Glass Card */}
 //       <motion.div
 //         initial={{ opacity: 0, y: 80, scale: 0.95 }}
 //         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -65,10 +65,10 @@
 //         </motion.h1>
 
 //         <p className="text-center text-slate-300 mt-2">
-//           Enter the future of collaboration 🚀
+//           Enter the future of collaboration 
 //         </p>
 
-//         {/* 📝 Form */}
+//         {/*  Form */}
 //         <form onSubmit={handleSignup} className="mt-6 space-y-4">
 
 //           {["name", "email", "password"].map((field, i) => (
@@ -89,7 +89,7 @@
 //             />
 //           ))}
 
-//           {/* 🚀 CTA Button */}
+//           {/*  CTA Button */}
 //           <motion.button
 //             whileHover={{ scale: 1.05 }}
 //             whileTap={{ scale: 0.95 }}
@@ -101,7 +101,7 @@
 //           </motion.button>
 //         </form>
 
-//         {/* 🔗 Login */}
+//         {/*  Login */}
 //         <motion.p
 //           initial={{ opacity: 0 }}
 //           animate={{ opacity: 1 }}
@@ -143,10 +143,10 @@ export default function Signup() {
     try {
       const res = await API.post("/auth/signup", data);
 
-      // 🔐 save token
+      //  save token
       localStorage.setItem("token", res.data.token);
 
-      // ➡️ go to complete profile
+      // go to complete profile
       navigate("/complete-profile");
     } catch (err) {
       alert(err.response?.data?.msg || "Signup failed");

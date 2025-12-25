@@ -2,7 +2,7 @@ const router = require("express").Router();
 const Chat = require("../models/Chat");
 const auth = require("../middleware/authMiddleware");
 
-// CREATE OR GET CHAT
+// ================= CREATE OR GET CHAT =================
 router.post("/find-or-create", auth, async (req, res) => {
   try {
     const { receiverId } = req.body;
@@ -29,7 +29,7 @@ router.post("/find-or-create", auth, async (req, res) => {
   }
 });
 
-// GET MY CHATS
+// ================= GET MY CHATS =================
 router.get("/", auth, async (req, res) => {
   try {
     const chats = await Chat.find({
@@ -38,7 +38,16 @@ router.get("/", auth, async (req, res) => {
       .populate("members", "name profilePic")
       .sort({ updatedAt: -1 });
 
-    res.json(chats);
+    // 🔹 Convert Map to Object for JSON response (important fix)
+    const chatsWithUnreadCounts = chats.map((chat) => {
+      const chatObj = chat.toObject();
+      if (chatObj.unreadCounts instanceof Map) {
+        chatObj.unreadCounts = Object.fromEntries(chatObj.unreadCounts);
+      }
+      return chatObj;
+    });
+
+    res.json(chatsWithUnreadCounts);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to load chats" });

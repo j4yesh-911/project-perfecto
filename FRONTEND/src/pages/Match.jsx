@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import API from "../services/api";
 import MatchCard from "../components/MatchCard";
 import MatchAnimation from "../components/MatchAnimation";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Match() {
+  const { dark } = useTheme();
+
   const [learnSkill, setLearnSkill] = useState("");
   const [teachSkill, setTeachSkill] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,8 +27,6 @@ export default function Match() {
         teachSkill: teachSkill.trim(),
       });
 
-      console.log("MATCH RESULT:", res.data);
-
       setTimeout(() => {
         if (res.data.length === 0) {
           setError("No matching users found.");
@@ -42,7 +43,7 @@ export default function Match() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-900 to-black p-6 text-white">
+    <div className="min-h-screen p-6">
       {/* INPUT SECTION */}
       <div className="max-w-3xl mx-auto mt-20">
         <h1 className="text-4xl font-bold text-center mb-10">
@@ -53,17 +54,29 @@ export default function Match() {
           <input
             type="text"
             placeholder="Skill you want to learn"
-            className="bg-black/40 border border-white/10 p-4 rounded-xl outline-none focus:border-cyan-400"
             value={learnSkill}
             onChange={(e) => setLearnSkill(e.target.value)}
+            className={`p-4 rounded-xl outline-none border
+              ${
+                dark
+                  ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  : "bg-black/5 border-black/20 text-black placeholder-gray-600"
+              }
+              focus:ring-2 focus:ring-cyan-400`}
           />
 
           <input
             type="text"
             placeholder="Skill you can teach"
-            className="bg-black/40 border border-white/10 p-4 rounded-xl outline-none focus:border-violet-400"
             value={teachSkill}
             onChange={(e) => setTeachSkill(e.target.value)}
+            className={`p-4 rounded-xl outline-none border
+              ${
+                dark
+                  ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  : "bg-black/5 border-black/20 text-black placeholder-gray-600"
+              }
+              focus:ring-2 focus:ring-violet-400`}
           />
         </div>
 
@@ -72,7 +85,9 @@ export default function Match() {
           whileTap={{ scale: 0.95 }}
           onClick={generateMatch}
           disabled={!learnSkill || !teachSkill || loading}
-          className="mt-8 w-full bg-gradient-to-r from-cyan-500 to-violet-500 p-4 rounded-xl font-semibold text-lg disabled:opacity-40"
+          className="mt-8 w-full bg-gradient-to-r from-cyan-500 to-violet-500
+                     p-4 rounded-xl font-semibold text-lg text-white
+                     disabled:opacity-40"
         >
           {loading ? "Matching..." : "Generate Match"}
         </motion.button>
@@ -83,9 +98,9 @@ export default function Match() {
         {loading && <MatchAnimation />}
       </AnimatePresence>
 
-      {/* ERROR / EMPTY STATE */}
+      {/* ERROR */}
       {!loading && error && (
-        <p className="text-center text-red-400 mt-12 text-lg">
+        <p className="text-center text-red-500 mt-12 text-lg">
           {error}
         </p>
       )}

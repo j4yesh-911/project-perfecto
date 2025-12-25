@@ -3,9 +3,12 @@ import { motion } from "framer-motion";
 import { User, User2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { dark } = useTheme();
+
   const [profile, setProfile] = useState({
     name: "",
     age: "",
@@ -31,10 +34,12 @@ export default function Profile() {
           navigate("/login");
           return;
         }
+
         const res = await API.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setProfile({
+
+        const data = {
           name: res.data.name || "",
           age: res.data.age || "",
           gender: res.data.gender || "",
@@ -45,19 +50,10 @@ export default function Profile() {
           skillsToLearn: res.data.skillsToLearn || [],
           skillsToTeach: res.data.skillsToTeach || [],
           profilePic: res.data.profilePic || "",
-        });
-        setOriginalProfile({
-          name: res.data.name || "",
-          age: res.data.age || "",
-          gender: res.data.gender || "",
-          email: res.data.email || "",
-          phone: res.data.phone || "",
-          username: res.data.username || "",
-          address: res.data.address || "",
-          skillsToLearn: res.data.skillsToLearn || [],
-          skillsToTeach: res.data.skillsToTeach || [],
-          profilePic: res.data.profilePic || "",
-        });
+        };
+
+        setProfile(data);
+        setOriginalProfile(data);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
         navigate("/login");
@@ -65,6 +61,7 @@ export default function Profile() {
         setLoading(false);
       }
     };
+
     fetchProfile();
   }, [navigate]);
 
@@ -75,21 +72,16 @@ export default function Profile() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
-
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      await API.put("/users/update-profile", {
-        ...profile,
-        skillsToTeach: profile.skillsToTeach,
-        skillsToLearn: profile.skillsToLearn,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setOriginalProfile({ ...profile });
+      await API.put(
+        "/users/update-profile",
+        profile,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setOriginalProfile(profile);
       setIsEditing(false);
       alert("Profile updated successfully!");
     } catch (error) {
@@ -99,223 +91,144 @@ export default function Profile() {
   };
 
   const handleCancel = () => {
-    setProfile({ ...originalProfile });
+    setProfile(originalProfile);
     setIsEditing(false);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl">Loading...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-black via-slate-900 to-black text-white">
-      <style>{`
-        select option {
-          color: white;
-          background: rgba(0, 0, 0, 0.8);
-        }
-      `}</style>
-      {loading ? (
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-xl">Loading...</div>
-        </div>
-      ) : (
+    <div className="min-h-screen p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto glass p-8 rounded-2xl"
+        className={`max-w-2xl mx-auto p-8 rounded-2xl backdrop-blur
+          ${dark ? "bg-white/10 text-white" : "bg-black/5 text-black"}`}
       >
-        <h1 className="text-3xl font-bold text-center mb-8 text-neon">Profile</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-neon">
+          Profile
+        </h1>
 
-        {!isEditing && (
-          <div className="text-center mb-6">
+        {/* ACTION BUTTONS */}
+        <div className="text-center mb-6 flex gap-4 justify-center">
+          {!isEditing ? (
             <button
-              onClick={handleEdit}
-              className="px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400 rounded-lg font-semibold hover:opacity-90 transition text-white"
+              onClick={() => setIsEditing(true)}
+              className="px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-400
+                         rounded-lg font-semibold text-white"
             >
-              ✏️ Edit Profile
+               Edit Profile
             </button>
-          </div>
-        )}
-
-        {isEditing && (
-          <div className="text-center mb-6 flex gap-4 justify-center">
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-green-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
-            >
-              💾 Save Changes
-            </button>
-            <button
-              onClick={handleCancel}
-              className="px-6 py-2 bg-red-500 rounded-lg font-semibold hover:opacity-90 transition text-white"
-            >
-              ❌ Cancel
-            </button>
-          </div>
-        )}
-
-        {/* Profile Picture */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative">
-            {profile.profilePic ? (
-              <img
-                src={profile.profilePic}
-                alt="Profile"
-                className="w-32 h-32 rounded-full object-cover border-4 border-neon"
-              />
-            ) : (
-              <div className="w-32 h-32 rounded-full bg-gray-600 border-4 border-neon flex items-center justify-center">
-                <ProfileIcon size={64} className="text-white" />
-              </div>
-            )}
-          </div>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                className="px-6 py-2 bg-green-500 rounded-lg text-white"
+              >
+                 Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-6 py-2 bg-red-500 rounded-lg text-white"
+              >
+                 Cancel
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Form Fields */}
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Name</label>
-            <input
-              type="text"
-              value={profile.name}
-              readOnly={!isEditing}
-              onChange={handleInputChange}
-              name="name"
-              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
+        {/* PROFILE PIC */}
+        <div className="flex justify-center mb-8">
+          {profile.profilePic ? (
+            <img
+              src={profile.profilePic}
+              alt="Profile"
+              className="w-32 h-32 rounded-full object-cover border-4 border-neon"
             />
-          </div>
+          ) : (
+            <div
+              className={`w-32 h-32 rounded-full flex items-center justify-center
+                ${dark ? "bg-gray-600" : "bg-gray-300"}`}
+            >
+              <ProfileIcon size={64} />
+            </div>
+          )}
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Username</label>
+        {/* FIELDS */}
+        <div className="space-y-6">
+          {[
+            ["name", "Name"],
+            ["username", "Username"],
+            ["age", "Age"],
+            ["phone", "Phone"],
+            ["address", "Address"],
+          ].map(([key, label]) => (
+            <div key={key}>
+              <label className="block text-sm mb-2">{label}</label>
               <input
-                type="text"
-                value={profile.username}
-                readOnly={!isEditing}
+                name={key}
+                value={profile[key]}
                 onChange={handleInputChange}
-                name="username"
-                className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
+                readOnly={!isEditing}
+                className={`w-full p-3 rounded-lg border
+                  ${dark ? "bg-white/10 border-white/20" : "bg-black/5 border-black/20"}`}
               />
             </div>
+          ))}
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Age</label>
-              <input
-                type="number"
-                value={profile.age}
-                readOnly={!isEditing}
-                onChange={handleInputChange}
-                name="age"
-                className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
-              />
-            </div>
-          </div>
-
+          {/* EMAIL (READ ONLY) */}
           <div>
-            <label className="block text-sm font-medium mb-2">Gender</label>
-            {isEditing ? (
-              <select
-                value={profile.gender}
-                onChange={handleInputChange}
-                name="gender"
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition text-white"
-              >
-                <option value="" className="bg-slate-800">Select Gender</option>
-                <option value="Male" className="bg-slate-800">Male</option>
-                <option value="Female" className="bg-slate-800">Female</option>
-                <option value="Other" className="bg-slate-800">Other</option>
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={profile.gender}
-                readOnly
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm mb-2">Email</label>
             <input
-              type="email"
               value={profile.email}
               readOnly
-              className="w-full p-3 rounded-lg bg-white/10 border border-white/20"
+              className={`w-full p-3 rounded-lg border
+                ${dark ? "bg-white/10 border-white/20" : "bg-black/5 border-black/20"}`}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Phone Number</label>
-            <input
-              type="text"
-              value={profile.phone}
-              readOnly={!isEditing}
-              onChange={handleInputChange}
-              name="phone"
-              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Address</label>
-            <input
-              type="text"
-              value={profile.address}
-              readOnly={!isEditing}
-              onChange={handleInputChange}
-              name="address"
-              className={`w-full p-3 rounded-lg bg-white/10 border border-white/20 ${isEditing ? 'focus:border-neon focus:outline-none transition' : ''}`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Skills to Learn</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={profile.skillsToLearn.join(", ")}
-                onChange={(e) => setProfile(prev => ({ ...prev, skillsToLearn: e.target.value.split(", ").filter(s => s.trim()) }))}
-                placeholder="e.g., React, Node.js, Python"
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
-              />
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {profile.skillsToLearn.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-neon/20 text-neon rounded-full text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Skills to Teach</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={profile.skillsToTeach.join(", ")}
-                onChange={(e) => setProfile(prev => ({ ...prev, skillsToTeach: e.target.value.split(", ").filter(s => s.trim()) }))}
-                placeholder="e.g., JavaScript, Design, Marketing"
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:border-neon focus:outline-none transition"
-              />
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {profile.skillsToTeach.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* SKILLS */}
+          {[
+            ["skillsToLearn", "Skills to Learn"],
+            ["skillsToTeach", "Skills to Teach"],
+          ].map(([key, label]) => (
+            <div key={key}>
+              <label className="block text-sm mb-2">{label}</label>
+              {isEditing ? (
+                <input
+                  value={profile[key].join(", ")}
+                  onChange={(e) =>
+                    setProfile((prev) => ({
+                      ...prev,
+                      [key]: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
+                    }))
+                  }
+                  className={`w-full p-3 rounded-lg border
+                    ${dark ? "bg-white/10 border-white/20" : "bg-black/5 border-black/20"}`}
+                />
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {profile[key].map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 rounded-full text-sm bg-neon/20 text-neon"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </motion.div>
-    )}
     </div>
   );
 }

@@ -1,158 +1,158 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import ThemeToggle from "./ThemeToggle";
+import { getSocket } from "../services/socket";
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const socket = getSocket();
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [unreadChats, setUnreadChats] = useState(0);
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  const login = !!localStorage.getItem("token");
+
+  // ================= CLICK OUTSIDE =================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Incoming-call related hooks were removed; keep placeholder handlers
-  const handleAcceptCall = () => {};
-  const handleDeclineCall = () => {};
+  // ================= SOCKET CHAT NOTIFICATION =================
+  useEffect(() => {
+    if (!socket || !login) return;
 
-const login = !!window.localStorage.getItem("token");
+    // when new message arrives
+    socket.on("newChatMessage", () => {
+      // if user is NOT on chats page, increase count
+      if (!location.pathname.startsWith("/chats")) {
+        setUnreadChats((prev) => prev + 1);
+      }
+    });
 
-const logoutfun = () =>{
-  localStorage.removeItem("token")
-  navigate("/login")
-  alert("logged out")
-}
+    return () => {
+      socket.off("newChatMessage");
+    };
+  }, [socket, login, location.pathname]);
 
-const handledashboard = ()=>{
-  if(login){
-    navigate("/dashboard");
-  }else{
+  // ================= CLEAR COUNT WHEN CHAT PAGE OPEN =================
+  useEffect(() => {
+    if (location.pathname.startsWith("/chats")) {
+      setUnreadChats(0);
+      socket.emit("markChatsRead");
+    }
+  }, [location.pathname, socket]);
+
+  // ================= ACTIONS =================
+  const logoutfun = () => {
+    localStorage.removeItem("token");
     navigate("/login");
-  }
-}
+    alert("logged out");
+  };
 
+  const handledashboard = () => (login ? navigate("/dashboard") : navigate("/login"));
+  const handlechat = () => (login ? navigate("/chats") : navigate("/login"));
+  const handleprofile = () => (login ? navigate("/profile") : navigate("/login"));
 
-const handlechat = ()=>{
-  if(login){
-    navigate("/chats");
-  }else{
-    navigate("/login");
-  }
-}
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
+  const handleAbout = () => {
+    navigate("/about");
+    setIsDropdownOpen(false);
+  };
 
-const handleprofile = ()=>{
-  if(login){
-    navigate("/profile");
-  }else{
-    navigate("/login");
-  }
-}
+  const handleSettingsProfile = () => {
+    handleprofile();
+    setIsDropdownOpen(false);
+  };
 
-const toggleDropdown = () => {
-  setIsDropdownOpen(!isDropdownOpen);
-};
+  const handleSettingsLogout = () => {
+    logoutfun();
+    setIsDropdownOpen(false);
+  };
 
-const handleAbout = () => {
-  navigate("/about");
-  setIsDropdownOpen(false);
-};
-
-const handleSettingsProfile = () => {
-  handleprofile();
-  setIsDropdownOpen(false);
-};
-
-const handleSettingsLogout = () => {
-  logoutfun();
-  setIsDropdownOpen(false);
-};
-
-const match = () => {
-navigate("/match")
-  setIsDropdownOpen(false);
-};
-
-
+  const match = () => {
+    navigate("/match");
+    setIsDropdownOpen(false);
+  };
 
   return (
-    <>
-      {/* Incoming-call UI removed: handled in VideoRoom or global provider */}
+    <nav className="flex justify-between items-center px-8 py-4 glass relative">
+      <h1 className="text-xl font-bold text-neon">SkillSwap</h1>
 
-      <nav className="flex justify-between items-center px-8 py-4 glass relative">
-        <h1 className="text-xl font-bold text-neon">SkillSwap</h1>
-        <div className="flex gap-6 items-center">
-          <Link to="/" className="hover:text-blue-400 transition-colors">Home</Link>
-          <button onClick={handledashboard} className="hover:text-blue-400 transition-colors">Dashboard</button>
-          <button onClick={handlechat} className="hover:text-blue-400 transition-colors">Chats</button>
-          <button onClick={match} className="hover:text-blue-400 transition-colors">match</button>
-          
+      <div className="flex gap-6 items-center">
+        <Link to="/" className="hover:text-blue-400 transition-colors">
+          Home
+        </Link>
 
-          <ThemeToggle />
+        <button onClick={handledashboard} className="hover:text-blue-400 transition-colors">
+          Dashboard
+        </button>
 
-          {/* Settings Dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={toggleDropdown}
-              className="flex items-center gap-2 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-white/10"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
-              Settings
-              <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+        {/* 🔔 CHAT WITH BADGE */}
+        <button
+          onClick={handlechat}
+          className="relative hover:text-blue-400 transition-colors"
+        >
+          Chats
+          {unreadChats > 0 && (
+            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {unreadChats}
+            </span>
+          )}
+        </button>
 
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-gray-800 dark:bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-50">
-                <div className="py-1">
-                  <button
-                    onClick={handleSettingsProfile}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                    Profile
-                  </button>
+        <button onClick={match} className="hover:text-blue-400 transition-colors">
+          Match
+        </button>
 
+        <ThemeToggle />
 
-                  <button
-                    onClick={handleAbout}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    About Us
-                  </button>
-                  <div className="border-t border-gray-600 my-1"></div>
-                  <button
-                    onClick={handleSettingsLogout}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-red-600 hover:bg-opacity-20 transition-colors text-red-400"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-                    </svg>
-                    Logout
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* SETTINGS */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={toggleDropdown}
+            className="flex items-center gap-2 hover:text-blue-400 transition-colors p-2 rounded-lg hover:bg-white/10"
+          >
+            Settings
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-600 z-50">
+              <button
+                onClick={handleSettingsProfile}
+                className="w-full px-4 py-3 text-left hover:bg-gray-700"
+              >
+                Profile
+              </button>
+
+              <button
+                onClick={handleAbout}
+                className="w-full px-4 py-3 text-left hover:bg-gray-700"
+              >
+                About Us
+              </button>
+
+              <div className="border-t border-gray-600" />
+
+              <button
+                onClick={handleSettingsLogout}
+                className="w-full px-4 py-3 text-left text-red-400 hover:bg-red-600/20"
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 }
