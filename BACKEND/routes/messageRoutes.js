@@ -39,13 +39,48 @@ router.get("/:chatId", auth, async (req, res) => {
   res.json(messages);
 });
 
+// Mark messages as read by current user
 router.post("/:chatId/read", auth, async (req, res) => {
   const chat = await Chat.findById(req.params.chatId);
   if (chat) {
     chat.unreadCounts.set(req.user.id.toString(), 0);
     await chat.save();
   }
+
+  // Update message status to seen for messages from other users
+  await Message.updateMany(
+    {
+      chatId: req.params.chatId,
+      sender: { $ne: req.user.id },
+      status: { $ne: "seen" }
+    },
+    {
+      status: "seen",
+      $addToSet: {
+        readBy: {
+          userId: req.user.id,
+          readAt: new Date()
+        }
+      }
+    }
+  );
+
   res.status(200).json({ success: true });
+});
+
+// Get message read status
+router.get("/:messageId/status", auth, async (req, res) => {
+  const message = await Message.findById(req.params.messageId).populate('readBy.userId', 'name profilePic');
+  if (!message) {
+    return res.status(404).json({ error: "Message not found" });
+  }
+
+  res.json({
+    _id: message._id,
+    status: message.status,
+    readBy: message.readBy || [],
+    createdAt: message.createdAt
+  });
 });
 
 module.exports = router;

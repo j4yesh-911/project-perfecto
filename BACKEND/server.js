@@ -58,9 +58,53 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("joinChat", (chatId) => {
+  socket.on("joinChat", async (chatId) => {
     console.log("👥 joinChat", chatId);
     socket.join(chatId);
+    
+    // Mark all messages in this chat as seen when user opens the chat
+    // Reset unread count for this user
+    if (socket.userId) {
+      const chat = await Chat.findById(chatId);
+      if (chat) {
+        // Reset unread count for this user
+        chat.unreadCounts.set(socket.userId.toString(), 0);
+        await chat.save();
+        
+        // Emit unread count update
+        io.to(chatId).emit("unreadCountUpdate", {
+          chatId,
+          userId: socket.userId.toString(),
+          unreadCount: 0
+        });
+        
+        // Find all messages sent to this user in this chat that are not yet seen
+        const unseenMessages = await Message.find({
+          chatId,
+          sender: { $ne: socket.userId },
+          status: { $ne: "seen" }
+        });
+
+        if (unseenMessages.length > 0) {
+          // Update status to seen
+          await Message.updateMany(
+            {
+              chatId,
+              sender: { $ne: socket.userId },
+              status: { $ne: "seen" }
+            },
+            { status: "seen" }
+          );
+          
+          // Emit status update to sender
+          io.to(chatId).emit("messageStatusUpdate", {
+            chatId,
+            messageIds: unseenMessages.map(m => m._id.toString()),
+            status: "seen"
+          });
+        }
+      }
+    }
   });
 
 
@@ -120,12 +164,44 @@ socket.on("callDeclined", async ({ chatId }) => {
   socket.to(chatId).emit("callDeclined");
 });
 
-socket.on("typingStart", ({ chatId, userId }) => {
-  socket.to(chatId).emit("typingStart", { chatId, userId });
+socket.on("typing", async ({ chatId }) => {
+  if (!socket.userId) return;
+  
+  // Add user to typing list
+  const chat = await Chat.findById(chatId);
+  if (chat && !chat.typingUsers.includes(socket.userId)) {
+    chat.typingUsers.push(socket.userId);
+    await chat.save();
+  }
+  
+  // Broadcast typing event with user info
+  socket.to(chatId).emit("typing", { chatId, userId: socket.userId });
+  
+  // Auto-remove from typing after 3 seconds if no new event (match frontend)
+  setTimeout(async () => {
+    const updatedChat = await Chat.findById(chatId);
+    if (updatedChat) {
+      updatedChat.typingUsers = updatedChat.typingUsers.filter(
+        u => u.toString() !== socket.userId.toString()
+      );
+      await updatedChat.save();
+    }
+  }, 3000);
 });
 
-socket.on("typingStop", ({ chatId, userId }) => {
-  socket.to(chatId).emit("typingStop", { chatId, userId });
+socket.on("stopTyping", async ({ chatId }) => {
+  if (!socket.userId) return;
+  
+  // Remove user from typing list
+  const chat = await Chat.findById(chatId);
+  if (chat) {
+    chat.typingUsers = chat.typingUsers.filter(
+      u => u.toString() !== socket.userId.toString()
+    );
+    await chat.save();
+  }
+  
+  socket.to(chatId).emit("stopTyping", { chatId, userId: socket.userId });
 });
 
 
@@ -148,6 +224,7 @@ socket.on("typingStop", ({ chatId, userId }) => {
       chatId,
       sender: senderId,
       text,
+      status: "sent",
     });
 
     // Update lastSeen for sender
@@ -161,6 +238,13 @@ socket.on("typingStop", ({ chatId, userId }) => {
       const currentUnread = chat.unreadCounts.get(otherMember.toString()) || 0;
       chat.unreadCounts.set(otherMember.toString(), currentUnread + 1);
       await chat.save();
+      
+      // Emit unread count update to receiver
+      io.to(chatId).emit("unreadCountUpdate", {
+        chatId,
+        userId: otherMember.toString(),
+        unreadCount: currentUnread + 1
+      });
     }
 
     await Chat.findByIdAndUpdate(chatId, {
@@ -171,14 +255,39 @@ socket.on("typingStop", ({ chatId, userId }) => {
       updatedAt: Date.now(),
     });
 
-    io.to(chatId).emit("receiveMessage", {
+    // Emit to sender with "sent" status (so they see their message immediately)
+    socket.emit("receiveMessage", {
       _id: message._id,
       chatId,
       sender: senderId,
       text,
       type: "user",
-      status: message.status,
+      status: "sent",
       createdAt: message.createdAt,
+    });
+
+    // Update message to "delivered" and emit to receiver (receiver doesn't need status)
+    await Message.findByIdAndUpdate(
+      message._id,
+      { status: "delivered" },
+      { new: true }
+    );
+
+    // Emit to receiver (they don't need status field)
+    socket.to(chatId).emit("receiveMessage", {
+      _id: message._id,
+      chatId,
+      sender: senderId,
+      text,
+      type: "user",
+      createdAt: message.createdAt,
+    });
+
+    // Emit status update to sender to change from "sent" to "delivered"
+    socket.emit("messageStatusUpdate", {
+      chatId,
+      messageId: message._id.toString(),
+      status: "delivered"
     });
 
     console.log("📤 Message emitted to room", chatId, "with data:", {
@@ -186,8 +295,118 @@ socket.on("typingStop", ({ chatId, userId }) => {
       chatId,
       sender: senderId,
       text,
-      type: "user"
+      type: "user",
+      status: "delivered"
     });
+  });
+
+  // Handle message seen status update - improved version
+  socket.on("markMessagesAsSeen", async ({ chatId }) => {
+    if (!socket.userId) return;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) return;
+
+    // Find messages that need to be updated
+    const messagesToUpdate = await Message.find({
+      chatId,
+      sender: { $ne: socket.userId },
+      status: { $ne: "seen" }
+    }).select("_id status");
+
+    if (messagesToUpdate.length > 0) {
+      const messageIds = messagesToUpdate.map(m => m._id);
+      
+      // Update all messages to "seen" and add user to readBy
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds }
+        },
+        { 
+          status: "seen",
+          $addToSet: { 
+            readBy: { 
+              userId: socket.userId,
+              readAt: new Date()
+            }
+          }
+        }
+      );
+
+      // Emit status update to sender with double checkmark
+      io.to(chatId).emit("messageStatusUpdate", {
+        chatId,
+        messageIds: messageIds.map(id => id.toString()),
+        status: "seen"
+      });
+      
+      console.log("✔️✔️ Messages marked as seen in chat:", chatId);
+    }
+  });
+
+  // Handle unsend message - professional soft delete
+  socket.on("unsendMessage", async ({ chatId, messageId }) => {
+    if (!socket.userId) return;
+
+    const message = await Message.findById(messageId);
+    if (!message) return;
+
+    // Check if user is the sender
+    if (message.sender.toString() !== socket.userId.toString()) {
+      console.log("❌ User is not the sender of this message");
+      return;
+    }
+
+    // Check if message is older than 2 hours (optional: adjust as needed)
+    const messageAge = Date.now() - new Date(message.createdAt).getTime();
+    const twoHours = 2 * 60 * 60 * 1000;
+    
+    if (messageAge > twoHours) {
+      socket.emit("unsendError", { 
+        messageId, 
+        error: "Cannot unsend message older than 2 hours" 
+      });
+      return;
+    }
+
+    // Soft delete the message
+    message.isDeleted = true;
+    message.deletedAt = new Date();
+    await message.save();
+
+    // Emit update to all users in the chat
+    io.to(chatId).emit("messageDeleted", {
+      chatId,
+      messageId: messageId.toString(),
+      text: "🗑️ This message was deleted",
+      isDeleted: true
+    });
+
+    // Update last message if this was the last message
+    const chat = await Chat.findById(chatId);
+    if (chat.lastMessage && chat.lastMessage.sender?.toString() === message.sender.toString()) {
+      // Find the most recent non-deleted message
+      const lastNonDeletedMessage = await Message.findOne({
+        chatId,
+        isDeleted: { $ne: true }
+      }).sort({ createdAt: -1 });
+
+      if (lastNonDeletedMessage) {
+        chat.lastMessage = {
+          text: lastNonDeletedMessage.text,
+          sender: lastNonDeletedMessage.sender,
+          isDeleted: false
+        };
+      } else {
+        chat.lastMessage = {
+          text: "Start a conversation",
+          sender: null
+        };
+      }
+      await chat.save();
+    }
+
+    console.log("🗑️ Message unsent:", messageId);
   });
 });
 
