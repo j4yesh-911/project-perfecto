@@ -148,16 +148,18 @@ export default function Chat() {
   }, [text, chatId, socket]);
 
   const sendMessage = () => {
-    if (!text.trim()) return;
+  const message = text.trim();
+  if (!message) return;
 
-    socket.emit("sendMessage", {
-      chatId,
-      senderId: myId,
-      text,
-    });
+  socket.emit("sendMessage", {
+    chatId,
+    senderId: myId,
+    text: message,
+  });
 
-    setText("");
-  };
+  setText("");
+};
+
 
   const unsendMessage = (messageId) => {
     socket.emit("unsendMessage", {
@@ -267,22 +269,25 @@ export default function Chat() {
               >
                 <div className="flex flex-col items-end relative group">
                   <div
-                    className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words ${
-                      isDeleted
-                        ? dark
-                          ? "bg-slate-700/50 text-gray-400 italic"
-                          : "bg-slate-300/50 text-gray-500 italic"
-                        : isMine
-                        ? dark
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                          : "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
-                        : dark
-                        ? "bg-white/10 text-white backdrop-blur"
-                        : "bg-white/30 text-black backdrop-blur"
-                    }`}
-                  >
-                    {isDeleted ? "🗑️ This message was deleted" : m.text}
-                  </div>
+  className={`max-w-[90%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+    break-normal whitespace-pre-wrap
+    ${
+      isDeleted
+        ? dark
+          ? "bg-slate-700/50 text-gray-400 italic"
+          : "bg-slate-300/50 text-gray-500 italic"
+        : isMine
+        ? dark
+          ? "bg-blue-600 text-white"
+          : "bg-blue-500 text-white"
+        : dark
+        ? "bg-white/10 text-white"
+        : "bg-white/30 text-black"
+    }`}
+>
+  {isDeleted ? "🗑️ This message was deleted" : m.text}
+</div>
+
                   <div className="flex items-center mt-1 px-1 gap-1.5">
                     <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>
                       {formatTime(m.createdAt)}
@@ -356,19 +361,25 @@ export default function Chat() {
           </button>
 
           {/* INPUT */}
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Write a message…"
-            className={`flex-1 px-4 py-3 rounded-2xl outline-none
-              ${
-                dark
-                  ? "bg-white/10 text-white placeholder-gray-400"
-                  : "bg-black/10 text-black placeholder-gray-500"
-              }
-              focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          />
+<input
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  placeholder="Write a message…"
+  className={`flex-1 px-4 py-3 rounded-2xl outline-none
+    ${
+      dark
+        ? "bg-white/10 text-white placeholder-gray-400"
+        : "bg-black/10 text-black placeholder-gray-500"
+    }
+    focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }}
+/>
+
 
           {/* SEND BUTTON */}
           <AnimatePresence>
