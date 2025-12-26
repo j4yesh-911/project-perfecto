@@ -1,4 +1,3 @@
-// controllers/authController.js
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -37,10 +36,6 @@ exports.signup = async (req, res) => {
       token,
     });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ msg: "Email already registered" });
-    }
-
     console.error(error);
     res.status(500).json({ msg: "Server error" });
   }
@@ -82,14 +77,21 @@ exports.login = async (req, res) => {
   }
 };
 
+// ================= GET LOGGED-IN USER (FIXED) =================
 // ================= GET LOGGED-IN USER =================
 exports.getMe = async (req, res) => {
   try {
-    // authMiddleware ne req.user.id set kiya hai
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id)
+      .populate("swappers", "name username profilePic")
+      .select("-password");
+
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
+
+    // 🔥 REMOVE NON-EXISTING USERS
+    user.swappers = user.swappers.filter(Boolean);
+
     res.json(user);
   } catch (error) {
     console.error("getMe error:", error);

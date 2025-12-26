@@ -11,7 +11,8 @@ import ChatsList from "../pages/ChatsList";
 import CompleteProfile from "../pages/CompleteProfile";
 import About from "../pages/About";
 import Match from "../pages/Match";
-import UserProfile from "../pages/UserProfile";
+import SwapRequests from "../pages/SwapRequests";
+import Swappers from "../pages/Swappers";
 
 
 
@@ -30,7 +31,6 @@ export default function AppRoutes() {
       <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/about" element ={<About />} />
       <Route path="/match" element={<Match />} />
-      <Route path="/user/:id" element={<UserProfile />} />
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
   );

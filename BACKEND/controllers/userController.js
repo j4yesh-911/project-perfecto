@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const Like = require("../models/Like");
 
-// ================= COMPLETE PROFILE =================
+/* ================= COMPLETE PROFILE ================= */
 exports.completeProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -35,7 +35,7 @@ exports.completeProfile = async (req, res) => {
         isProfileComplete: true,
       },
       { new: true }
-    );
+    ).select("-password");
 
     res.status(200).json({ msg: "Profile completed", user });
   } catch (err) {
@@ -44,7 +44,7 @@ exports.completeProfile = async (req, res) => {
   }
 };
 
-// ================= GET ALL USERS =================
+/* ================= GET ALL USERS ================= */
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find({
@@ -59,7 +59,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ================= GET POTENTIAL MATCHES =================
+/* ================= GET POTENTIAL MATCHES ================= */
 exports.getPotentialMatches = async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
@@ -87,11 +87,12 @@ exports.getPotentialMatches = async (req, res) => {
   }
 };
 
-// ================= GET USER BY ID =================
+/* ================= GET USER BY ID ================= */
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ msg: "User not found" });
+
     res.status(200).json(user);
   } catch (err) {
     console.error(err);
@@ -99,14 +100,12 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// ================= UPDATE PROFILE =================
+/* ================= UPDATE PROFILE ================= */
 exports.updateProfile = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      req.body,
-      { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user.id, req.body, {
+      new: true,
+    }).select("-password");
 
     res.status(200).json({ msg: "Profile updated", user });
   } catch (err) {
@@ -115,9 +114,13 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// ================= MATCH USERS (FINAL & WORKING) =================
+/* ================= MATCH USERS ================= */
 exports.matchUsers = async (req, res) => {
   let { learnSkill, teachSkill } = req.body;
+
+  if (!learnSkill || !teachSkill) {
+    return res.status(400).json({ msg: "Skills required" });
+  }
 
   learnSkill = learnSkill.trim();
   teachSkill = teachSkill.trim();
@@ -126,16 +129,8 @@ exports.matchUsers = async (req, res) => {
     const users = await User.find({
       _id: { $ne: req.user.id },
       isProfileComplete: true,
-
-      // THEY teach what I want to learn
-      skillsToTeach: {
-        $regex: new RegExp(`^${learnSkill}$`, "i"),
-      },
-
-      // THEY want to learn what I can teach
-      skillsToLearn: {
-        $regex: new RegExp(`^${teachSkill}$`, "i"),
-      },
+      skillsToTeach: { $regex: new RegExp(`^${learnSkill}$`, "i") },
+      skillsToLearn: { $regex: new RegExp(`^${teachSkill}$`, "i") },
     }).select("-password");
 
     res.status(200).json(users);
