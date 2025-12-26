@@ -116,22 +116,36 @@ exports.updateProfile = async (req, res) => {
 
 /* ================= MATCH USERS ================= */
 exports.matchUsers = async (req, res) => {
-  let { learnSkill, teachSkill } = req.body;
+  let { learnSkill, teachSkill, perfectMatch = false } = req.body;
 
-  if (!learnSkill || !teachSkill) {
+  if (!learnSkill || (perfectMatch && !teachSkill)) {
     return res.status(400).json({ msg: "Skills required" });
   }
 
   learnSkill = learnSkill.trim();
-  teachSkill = teachSkill.trim();
+  teachSkill = teachSkill ? teachSkill.trim() : "";
 
   try {
-    const users = await User.find({
-      _id: { $ne: req.user.id },
-      isProfileComplete: true,
-      skillsToTeach: { $regex: new RegExp(`^${learnSkill}$`, "i") },
-      skillsToLearn: { $regex: new RegExp(`^${teachSkill}$`, "i") },
-    }).select("-password");
+    let query;
+
+    if (perfectMatch) {
+      // Perfect match: users who teach learnSkill and learn teachSkill
+      query = {
+        _id: { $ne: req.user.id },
+        isProfileComplete: true,
+        skillsToTeach: { $regex: new RegExp(`^${learnSkill}$`, "i") },
+        skillsToLearn: { $regex: new RegExp(`^${teachSkill}$`, "i") },
+      };
+    } else {
+      // Non-perfect match: users who teach learnSkill (regardless of what they learn)
+      query = {
+        _id: { $ne: req.user.id },
+        isProfileComplete: true,
+        skillsToTeach: { $regex: new RegExp(`^${learnSkill}$`, "i") },
+      };
+    }
+
+    const users = await User.find(query).select("-password");
 
     res.status(200).json(users);
   } catch (err) {

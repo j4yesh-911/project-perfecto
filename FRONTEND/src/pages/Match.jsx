@@ -10,12 +10,16 @@ export default function Match() {
 
   const [learnSkill, setLearnSkill] = useState("");
   const [teachSkill, setTeachSkill] = useState("");
+  const [perfectMatch, setPerfectMatch] = useState(false);
   const [loading, setLoading] = useState(false);
   const [matches, setMatches] = useState([]);
   const [error, setError] = useState("");
 
   const generateMatch = async () => {
-    if (!learnSkill || !teachSkill) return;
+    if (!learnSkill || (perfectMatch && !teachSkill)) {
+      setError("Please fill in the required skills.");
+      return;
+    }
 
     setLoading(true);
     setMatches([]);
@@ -25,6 +29,7 @@ export default function Match() {
       const res = await API.post("/users/match", {
         learnSkill: learnSkill.trim(),
         teachSkill: teachSkill.trim(),
+        perfectMatch,
       });
 
       setTimeout(() => {
@@ -47,55 +52,93 @@ export default function Match() {
       {/* INPUT SECTION */}
       <div className="max-w-3xl mx-auto mt-20">
         <h1 className="text-4xl font-bold text-center mb-10">
-          Find Your Perfect Skill Swap
+          {perfectMatch ? "Find Your Perfect Skill Swap" : "Find Skill Teachers"}
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <input
-            type="text"
-            placeholder="Skill you want to learn"
-            value={learnSkill}
-            onChange={(e) => setLearnSkill(e.target.value)}
-            className={`p-4 rounded-xl outline-none border
-              ${
-                dark
-                  ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
-                  : "bg-black/5 border-black/20 text-black placeholder-gray-600"
-              }
-              focus:ring-2 focus:ring-cyan-400`}
-          />
-
-          <input
-            type="text"
-            placeholder="Skill you can teach"
-            value={teachSkill}
-            onChange={(e) => setTeachSkill(e.target.value)}
-            className={`p-4 rounded-xl outline-none border
-              ${
-                dark
-                  ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
-                  : "bg-black/5 border-black/20 text-black placeholder-gray-600"
-              }
-              focus:ring-2 focus:ring-violet-400`}
-          />
+        {/* TOGGLE BUTTON */}
+        <div className="flex items-center justify-center mb-6">
+          <span className={`mr-3 text-lg ${dark ? 'text-white' : 'text-black'}`}>
+            {perfectMatch ? 'Perfect Match' : 'Skill Teachers'}
+          </span>
+          <motion.div
+            className={`w-14 h-8 rounded-full p-1 cursor-pointer ${
+              perfectMatch ? 'bg-gradient-to-r from-cyan-500 to-violet-500' : 'bg-gray-400'
+            }`}
+            onClick={() => setPerfectMatch(!perfectMatch)}
+            whileTap={{ scale: 0.95 }}
+          >
+            <motion.div
+              className="w-6 h-6 bg-white rounded-full shadow-md"
+              animate={{ x: perfectMatch ? 24 : 0 }}
+              transition={{ type: "spring", stiffness: 700, damping: 30 }}
+            />
+          </motion.div>
         </div>
+
+        {perfectMatch ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input
+              type="text"
+              placeholder="Skill you want to learn"
+              value={learnSkill}
+              onChange={(e) => setLearnSkill(e.target.value)}
+              className={`p-4 rounded-xl outline-none border
+                ${
+                  dark
+                    ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    : "bg-black/5 border-black/20 text-black placeholder-gray-600"
+                }
+                focus:ring-2 focus:ring-cyan-400`}
+            />
+
+            <input
+              type="text"
+              placeholder="Skill you can teach"
+              value={teachSkill}
+              onChange={(e) => setTeachSkill(e.target.value)}
+              className={`p-4 rounded-xl outline-none border
+                ${
+                  dark
+                    ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    : "bg-black/5 border-black/20 text-black placeholder-gray-600"
+                }
+                focus:ring-2 focus:ring-violet-400`}
+            />
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto">
+            <input
+              type="text"
+              placeholder="Skill you want to learn"
+              value={learnSkill}
+              onChange={(e) => setLearnSkill(e.target.value)}
+              className={`p-4 rounded-xl outline-none border w-full
+                ${
+                  dark
+                    ? "bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    : "bg-black/5 border-black/20 text-black placeholder-gray-600"
+                }
+                focus:ring-2 focus:ring-cyan-400`}
+            />
+          </div>
+        )}
 
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={generateMatch}
-          disabled={!learnSkill || !teachSkill || loading}
+          disabled={!learnSkill || (perfectMatch && !teachSkill) || loading}
           className="mt-8 w-full bg-gradient-to-r from-cyan-500 to-violet-500
                      p-4 rounded-xl font-semibold text-lg text-white
                      disabled:opacity-40"
         >
-          {loading ? "Matching..." : "Generate Match"}
+          {loading ? "Matching..." : perfectMatch ? "Generate Match" : "Find Teachers"}
         </motion.button>
       </div>
 
       {/* FULLSCREEN ANIMATION */}
       <AnimatePresence>
-        {loading && <MatchAnimation />}
+        {loading && <MatchAnimation perfectMatch={perfectMatch} />}
       </AnimatePresence>
 
       {/* ERROR */}
