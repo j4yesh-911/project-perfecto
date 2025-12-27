@@ -24,6 +24,11 @@ export default function Chat() {
   const typingIndicatorTimeoutRef = useRef(null);
 
   const [showEmoji, setShowEmoji] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingIntervalRef = useRef(null);
 
 const onEmojiClick = (emojiData) => {
   setText((prev) => prev + emojiData.emoji);
@@ -178,6 +183,98 @@ const onEmojiClick = (emojiData) => {
     return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Use MP3 format for better compatibility
+      let mimeType = 'audio/mpeg';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/wav';
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+      }
+
+      console.log("Using MIME type:", mimeType);
+
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log("Audio blob created with type:", audioBlob.type, "size:", audioBlob.size);
+        await sendVoiceMessage(audioBlob);
+
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      alert("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const sendVoiceMessage = async (audioBlob) => {
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "voice-message.wav");
+      formData.append("chatId", chatId);
+
+      console.log("Uploading voice message, blob size:", audioBlob.size);
+
+      const response = await fetch("http://localhost:5000/api/messages/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${window.localStorage.getItem("token")}`,
+        },
+        body: formData,
+      });
+
+      console.log("Upload response status:", response.status);
+
+      if (response.ok) {
+        const message = await response.json();
+        console.log("Upload successful:", message);
+        socket.emit("sendMessage", {
+          chatId,
+          type: "voice",
+          audioUrl: message.audioUrl,
+        });
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to upload voice message:", response.status, errorText);
+        alert(`Upload failed: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error("Error sending voice message:", error);
+      alert(`Upload error: ${error.message}`);
+    }
+  };
+
   return (
     <div
       className="h-screen w-full flex flex-col relative"
@@ -279,7 +376,45 @@ const onEmojiClick = (emojiData) => {
                     : "bg-white/30 text-black"
                 }`}
             >
-              {m.text}
+              {m.type === "voice" ? (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        // Fetch the audio data and create a blob URL for better compatibility
+                        const response = await fetch(`http://localhost:5000${m.audioUrl}`);
+                        if (!response.ok) {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const audioData = await response.blob();
+                        const audioUrl = URL.createObjectURL(audioData);
+                        const audio = new Audio(audioUrl);
+
+                        audio.onerror = (e) => {
+                          console.error("Audio playback error:", e);
+                          URL.revokeObjectURL(audioUrl); // Clean up
+                          alert("Unable to play audio. The file format may not be supported.");
+                        };
+
+                        audio.onended = () => {
+                          URL.revokeObjectURL(audioUrl); // Clean up when done
+                        };
+
+                        await audio.play();
+                      } catch (error) {
+                        console.error("Error playing audio:", error);
+                        alert("Error playing audio: " + error.message);
+                      }
+                    }}
+                    className="flex items-center gap-2 text-sm hover:bg-white/10 rounded px-2 py-1 transition-colors"
+                  >
+                    <span className="text-lg">🔊</span>
+                    <span>Voice message</span>
+                  </button>
+                </div>
+              ) : (
+                m.text
+              )}
             </div>
 
             <div className="flex items-center mt-1 px-1 gap-1.5">
@@ -384,6 +519,29 @@ const onEmojiClick = (emojiData) => {
         theme={dark ? "dark" : "light"}
         onEmojiClick={onEmojiClick}
       />
+    </div>
+  )}
+
+  {/* VOICE BUTTON */}
+  <button
+    onMouseDown={startRecording}
+    onMouseUp={stopRecording}
+    onMouseLeave={stopRecording}
+    className={`w-11 h-11 rounded-lg transition-all duration-200 flex items-center justify-center text-lg
+      ${isRecording
+        ? "bg-red-500 hover:bg-red-600 animate-pulse"
+        : "bg-green-500 hover:bg-green-600"
+      }`}
+    title={isRecording ? "Recording... Release to send" : "Hold to record voice"}
+  >
+    {isRecording ? "⏹️" : "🎤"}
+  </button>
+
+  {/* RECORDING INDICATOR */}
+  {isRecording && (
+    <div className="flex items-center gap-2 text-red-500 font-medium">
+      <span className="animate-pulse">🔴</span>
+      <span>{recordingTime}s</span>
     </div>
   )}
 

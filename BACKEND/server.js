@@ -30,6 +30,19 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "..")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.wav')) {
+      res.setHeader('Content-Type', 'audio/wav');
+    } else if (path.endsWith('.webm')) {
+      res.setHeader('Content-Type', 'audio/webm');
+    } else if (path.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'audio/mp4');
+    } else if (path.endsWith('.mp3')) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+    }
+  }
+}));
 
 // ================= ROUTES =================
 app.use("/api/auth", authRoutes);
@@ -137,17 +150,25 @@ io.on("connection", (socket) => {
   });
 
   // -------- SEND MESSAGE --------
-  socket.on("sendMessage", async ({ chatId, text }) => {
+  socket.on("sendMessage", async ({ chatId, text, type, audioUrl }) => {
     if (!socket.userId) return;
 
     const senderId = socket.userId;
 
-    const message = await Message.create({
+    const messageData = {
       chatId,
       sender: senderId,
-      text,
+      type: type || "text",
       status: "sent",
-    });
+    };
+
+    if (type === "voice") {
+      messageData.audioUrl = audioUrl;
+    } else {
+      messageData.text = text;
+    }
+
+    const message = await Message.create(messageData);
 
     await User.findByIdAndUpdate(senderId, { lastSeen: new Date() });
 
@@ -160,7 +181,10 @@ io.on("connection", (socket) => {
     await Chat.findByIdAndUpdate(chatId, {
       $inc: { [`unreadCounts.${receiverId}`]: 1 },
       $set: {
-        lastMessage: { text, sender: senderId },
+        lastMessage: {
+          text: type === "voice" ? "Voice message" : text,
+          sender: senderId
+        },
         updatedAt: Date.now(),
       },
     });
@@ -170,8 +194,9 @@ io.on("connection", (socket) => {
       _id: message._id,
       chatId,
       sender: senderId,
-      text,
-      type: "user",
+      text: type === "voice" ? null : text,
+      audioUrl: type === "voice" ? audioUrl : null,
+      type: type || "text",
       status: "sent",
       createdAt: message.createdAt,
     });
@@ -192,8 +217,9 @@ io.on("connection", (socket) => {
       _id: message._id,
       chatId,
       sender: senderId,
-      text,
-      type: "user",
+      text: type === "voice" ? null : text,
+      audioUrl: type === "voice" ? audioUrl : null,
+      type: type || "text",
       createdAt: message.createdAt,
     });
   });

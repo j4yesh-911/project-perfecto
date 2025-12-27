@@ -4,11 +4,13 @@ const MessageSchema = new mongoose.Schema(
   {
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    text: { type: String, required: true },
-    status: { 
-      type: String, 
-      enum: ["sent", "delivered", "seen"], 
-      default: "sent" 
+    type: { type: String, enum: ["text", "voice"], default: "text" },
+    text: { type: String, required: function() { return this.type === "text"; } },
+    audioUrl: { type: String, required: function() { return this.type === "voice"; } },
+    status: {
+      type: String,
+      enum: ["sent", "delivered", "seen"],
+      default: "sent"
     },
     readBy: [
       {

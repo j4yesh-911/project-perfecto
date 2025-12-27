@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "emoji-picker-react": "^4.16.1",
-    "framer-motion": "^12.23.26"
+    "framer-motion": "^12.23.26",
+    "multer": "^2.0.2"
   }
 }

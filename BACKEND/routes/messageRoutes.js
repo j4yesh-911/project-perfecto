@@ -1,7 +1,33 @@
 const router = require("express").Router();
+const multer = require("multer");
+const path = require("path");
 const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 const auth = require("../middleware/authMiddleware");
+
+// Configure multer for audio uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads/audio"));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    // Keep original extension to maintain format compatibility
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("audio/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only audio files are allowed"));
+    }
+  },
+});
 
 router.post("/", auth, async (req, res) => {
   const { chatId, text } = req.body;
@@ -82,6 +108,26 @@ router.get("/:messageId/status", auth, async (req, res) => {
     readBy: message.readBy || [],
     createdAt: message.createdAt
   });
+});
+
+// Upload voice message
+router.post("/upload", auth, upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio file provided" });
+    }
+
+    const audioUrl = `/uploads/audio/${req.file.filename}`;
+
+    res.status(201).json({
+      audioUrl,
+      filename: req.file.filename,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "Failed to upload audio file" });
+  }
 });
 
 module.exports = router;
