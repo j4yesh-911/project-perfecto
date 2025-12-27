@@ -63,7 +63,8 @@ export default function Dashboard() {
   if (loading) return <p className="p-6">Loading users...</p>;
 
   return (
-    <div className="min-h-screen p-6">
+    <div  className="bg-white text-black dark:bg-black dark:text-white">
+      
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Discover People</h1>
         <p className="text-gray-400 mb-8">

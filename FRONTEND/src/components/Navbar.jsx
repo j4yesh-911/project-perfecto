@@ -84,7 +84,14 @@ export default function Navbar() {
     setIsDropdownOpen(false);
   };
 
+
+  const swappers =() =>{
+    navigate("/swappers");
+  }
+
   return (
+
+    <div  className="bg-white text-black dark:bg-black dark:text-white">
     <nav className="flex justify-between items-center px-8 py-4 glass relative">
       <h1 className="text-xl font-bold text-neon">SkillSwap</h1>
 
@@ -112,6 +119,11 @@ export default function Navbar() {
 
         <button onClick={match} className="hover:text-blue-400 transition-colors">
           Match
+        </button>
+
+
+         <button onClick={swappers} className="hover:text-blue-400 transition-colors">
+          swappers
         </button>
 
         <ThemeToggle />
@@ -154,5 +166,6 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    </div>
   );
 }

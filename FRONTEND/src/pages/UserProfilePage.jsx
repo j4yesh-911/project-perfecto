@@ -25,8 +25,7 @@ const locationScore = (me, user) => {
   return 0;
 };
 
-const shuffle = (arr) =>
-  [...arr].sort(() => 0.5 - Math.random());
+const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
 
 export default function UserProfilePage() {
   const { id } = useParams();
@@ -151,12 +150,13 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-8 max-w-5xl mx-auto">
 
-        {/* ================= LEFT PROFILE ================= */}
+        {/* ================= TOP PROFILE ================= */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
           <img
             src={avatar}
+            alt="avatar"
             className="w-32 h-32 rounded-full mx-auto border-2 border-violet-500"
           />
 
@@ -168,7 +168,7 @@ export default function UserProfilePage() {
             {selectedUser.city || "—"}, {selectedUser.state || "—"}
           </p>
 
-          <div className="mt-6 text-sm space-y-2">
+          <div className="mt-6 text-sm space-y-2 text-center">
             <p><b>Teaches:</b> {selectedUser.skillsToTeach?.join(", ") || "N/A"}</p>
             <p><b>Learns:</b> {selectedUser.skillsToLearn?.join(", ") || "N/A"}</p>
           </div>
@@ -176,8 +176,12 @@ export default function UserProfilePage() {
           <div className="mt-8">
             {isSwapper ? (
               <div className="flex gap-3">
-                <button onClick={startChat} className="flex-1 bg-cyan-500/20 p-2 rounded-lg">Chat</button>
-                <button onClick={startVideo} className="flex-1 bg-violet-500/20 p-2 rounded-lg">Video</button>
+                <button onClick={startChat} className="flex-1 bg-cyan-500/20 p-2 rounded-lg">
+                  Chat
+                </button>
+                <button onClick={startVideo} className="flex-1 bg-violet-500/20 p-2 rounded-lg">
+                  Video
+                </button>
               </div>
             ) : isSent ? (
               <div className="text-center text-yellow-400 font-semibold">
@@ -195,16 +199,17 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* ================= RIGHT SUGGESTIONS ================= */}
+        {/* ================= BOTTOM SUGGESTIONS ================= */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">People you may like</h2>
+            <h2 className="text-xl font-semibold">
+              People you may like
+            </h2>
 
-            {/* 🌟 AESTHETIC REFRESH PILL */}
             <button
               onClick={refreshSuggestions}
               className="
-                group relative w-10 h-10 rounded-full
+                group w-10 h-10 rounded-full
                 bg-white/10 backdrop-blur-xl
                 border border-white/20
                 hover:bg-white/20 transition
@@ -234,6 +239,7 @@ export default function UserProfilePage() {
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -1,8 +1,7 @@
 import { Routes, Route } from "react-router-dom";
-import Home from "../pages/Home";
 // // import Auth from "../pages/Auth";
-import Login from "../pages/Login";
-import Signup from "../pages/Signup";
+// import Login from "../pages/Login";
+// import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import LiveSession from "../pages/LiveSession";
 import Profile from "../pages/profile"; 
@@ -14,14 +13,18 @@ import Match from "../pages/Match";
 import SwapRequests from "../pages/SwapRequests";
 import Swappers from "../pages/Swappers";
 import UserProfilePage from "../pages/UserProfilePage";
-
+import Home from "../pages/Home";
+import Login from "../pages/Login";
+import Signup from "../pages/Signup";
 
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+        
+    
       {/* <Route path="/auth" element={<Auth />} /> */}
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/dashboard" element={<Dashboard />} />
@@ -37,5 +40,6 @@ export default function AppRoutes() {
       <Route path="/users/:id" element={<UserProfilePage />} />
       {/* <Route path="/session/:id" element={<Session />} /> */}
     </Routes>
+
   );
 }
