@@ -345,9 +345,9 @@ const onEmojiClick = (emojiData) => {
   {/* VIDEO BUTTON */}
   <button
     onClick={() => setVideoOpen(true)}
-    className="w-11 h-11 rounded-lg bg-emerald-500/80
-               hover:bg-emerald-500 hover:scale-105
-               active:scale-95 transition-all duration-200
+    className="w-11 h-11 rounded-lg bg-white
+               hover:bg-gray-500 hover:scale-105
+               active:scale-100 transition-all duration-200
                flex items-center justify-center text-lg
                shadow-lg shadow-emerald-500/30"
     title="Start video call"
@@ -356,16 +356,26 @@ const onEmojiClick = (emojiData) => {
   </button>
 
   {/* EMOJI BUTTON */}
-  <button
-    onClick={() => setShowEmoji((p) => !p)}
-    className="w-11 h-11 rounded-lg
-               bg-yellow-400/80 hover:bg-yellow-400
-               active:scale-95 transition-all
-               flex items-center justify-center text-lg"
-    title="Emoji"
-  >
-    😀
-  </button>
+<button
+  onClick={() => setShowEmoji((p) => !p)}
+  className="w-11 h-11 rounded-lg
+             bg-white hover:bg-gray-400
+             active:scale-95 transition-all
+             flex items-center justify-center"
+  title="Emoji"
+>
+  <img
+    src="https://external-preview.redd.it/get-the-google-pixel-animated-emojis-on-signal-v0--ijLTYX2qLolbIqGFomfrMZ8LSJYsX85Cd-2GPwvvzE.jpg?width=1080&crop=smart&auto=webp&s=197c2536526c12b102dec621d802c4e19f0a5a30"
+    alt="Emoji Picker"
+    className="w-9 h-9 object-cover rounded-full"
+    draggable={false}
+    onError={(e) => {
+      e.currentTarget.src =
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF02Jj8T2t7PdkytAw42HDuuSz7yXguKn8Lg&s";
+    }}
+  />
+</button>
+
 
   {/* EMOJI PICKER */}
   {showEmoji && (

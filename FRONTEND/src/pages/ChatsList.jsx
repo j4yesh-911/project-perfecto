@@ -178,13 +178,20 @@ export default function ChatsList() {
 
                 {/* Avatar */}
                 <div className="relative z-10">
-                  <img
-                    src={otherUser?.profilePic || "/avatar.png"}
-                    alt={otherUser?.name}
-                    className={`w-14 h-14 rounded-full object-cover ${
-                      unreadCount > 0 ? "ring-2 ring-blue-500" : ""
-                    } transition-all`}
-                  />
+                 <img
+  src={
+    otherUser?.profilePic && otherUser.profilePic.trim() !== ""
+      ? otherUser.profilePic
+      : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF02Jj8T2t7PdkytAw42HDuuSz7yXguKn8Lg&s"
+  }
+  alt={otherUser?.name || "User"}
+  onError={(e) => {
+    e.currentTarget.src =
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF02Jj8T2t7PdkytAw42HDuuSz7yXguKn8Lg&s";
+  }}
+  className="w-14 h-14 rounded-full object-cover"
+/>
+
                 </div>
 
                 {/* Content */}
