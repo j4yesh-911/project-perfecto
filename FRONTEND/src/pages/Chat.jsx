@@ -123,8 +123,12 @@ const onEmojiClick = (emojiData) => {
         Authorization: `Bearer ${window.localStorage.getItem("token")}`,
       },
     })
-      .then((res) => res.json())
-      .then(setMessages);
+    .then((res) => res.json())
+.then((data) => {
+  const filtered = data.filter((m) => !m.isDeleted);
+  setMessages(filtered);
+});
+
   }, [chatId]);
 
   /* AUTO SCROLL */
@@ -134,27 +138,22 @@ const onEmojiClick = (emojiData) => {
 
   /* TYPING DETECTION */
   useEffect(() => {
-    if (!text.trim()) {
-      socket.emit("stopTyping", { chatId });
-      return;
-    }
+  if (!text.trim()) {
+    socket.emit("stopTyping", { chatId });
+    return;
+  }
 
-    socket.emit("typing", { chatId });
+  socket.emit("typing", { chatId });
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+  clearTimeout(typingTimeoutRef.current);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stopTyping", { chatId });
-    }, 1000);
+  typingTimeoutRef.current = setTimeout(() => {
+    socket.emit("stopTyping", { chatId });
+  }, 1500); // 👈 smoother UX
 
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [text, chatId, socket]);
+  return () => clearTimeout(typingTimeoutRef.current);
+}, [text, chatId, socket]);
+
 
   const sendMessage = () => {
   const message = text.trim();
@@ -240,86 +239,77 @@ const onEmojiClick = (emojiData) => {
       {/* MESSAGES */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6">
         <AnimatePresence>
-          {messages.map((m) => {
-            const isMine = String(m.sender) === String(myId);
-            const status = m.status || "sent";
-            const isDeleted = m.isDeleted || false;
-            
-            // Status indicator component - Professional
-            const StatusIndicator = () => {
-              if (!isMine || isDeleted) return null;
-              
-              if (status === "seen") {
-                return (
-                  <span className="text-xs ml-1 text-blue-500 font-bold">✔️✔️</span>
-                );
-              } else if (status === "delivered") {
-                return (
-                  <span className="text-xs ml-1 text-gray-400">✔️✔️</span>
-                );
-              } else {
-                return (
-                  <span className="text-xs ml-1 text-gray-400">✔️</span>
-                );
-              }
-            };
+    {messages.map((m) => {
+      // 🔥 INSTAGRAM STYLE: completely remove deleted messages
+      if (m.isDeleted) return null;
 
-            return (
-              <motion.div
-                key={m._id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`flex mb-4 ${
-                  isMine ? "justify-end" : "justify-start"
+      const isMine = String(m.sender) === String(myId);
+      const status = m.status || "sent";
+
+      const StatusIndicator = () => {
+        if (!isMine) return null;
+
+        if (status === "seen") {
+          return <span className="text-xs ml-1 text-blue-500 font-bold">✔️✔️</span>;
+        } else if (status === "delivered") {
+          return <span className="text-xs ml-1 text-gray-400">✔️✔️</span>;
+        } else {
+          return <span className="text-xs ml-1 text-gray-400">✔️</span>;
+        }
+      };
+
+      return (
+        <motion.div
+          key={m._id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className={`flex mb-4 ${isMine ? "justify-end" : "justify-start"}`}
+          onMouseEnter={() => isMine && setHoveredMessageId(m._id)}
+          onMouseLeave={() => setHoveredMessageId(null)}
+        >
+          <div className="flex flex-col items-end relative group">
+            <div
+              className={`max-w-[90%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                whitespace-pre-wrap break-words overflow-hidden
+                ${
+                  isMine
+                    ? dark
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-500 text-white"
+                    : dark
+                    ? "bg-white/10 text-white"
+                    : "bg-white/30 text-black"
                 }`}
-                onMouseEnter={() => isMine && !isDeleted && setHoveredMessageId(m._id)}
-                onMouseLeave={() => setHoveredMessageId(null)}
-              >
-                <div className="flex flex-col items-end relative group">
-                  <div
-  className={`max-w-[90%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
-    break-normal whitespace-pre-wrap
-    ${
-      isDeleted
-        ? dark
-          ? "bg-slate-700/50 text-gray-400 italic"
-          : "bg-slate-300/50 text-gray-500 italic"
-        : isMine
-        ? dark
-          ? "bg-blue-600 text-white"
-          : "bg-blue-500 text-white"
-        : dark
-        ? "bg-white/10 text-white"
-        : "bg-white/30 text-black"
-    }`}
->
-  {isDeleted ? "🗑️ This message was deleted" : m.text}
-</div>
+            >
+              {m.text}
+            </div>
 
-                  <div className="flex items-center mt-1 px-1 gap-1.5">
-                    <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                      {formatTime(m.createdAt)}
-                    </span>
-                    <StatusIndicator />
-                    {hoveredMessageId === m._id && !isDeleted && (
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={() => unsendMessage(m._id)}
-                        className="text-xs text-red-500 hover:text-red-600 opacity-70 hover:opacity-100 transition-opacity px-1.5 py-0.5 hover:bg-red-500/10 rounded"
-                        title="Unsend message"
-                      >
-                        ↩️
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+            <div className="flex items-center mt-1 px-1 gap-1.5">
+              <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                {formatTime(m.createdAt)}
+              </span>
+              <StatusIndicator />
+
+              {hoveredMessageId === m._id && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={() => unsendMessage(m._id)}
+                  className="text-xs text-red-500 hover:text-red-600 opacity-70 hover:opacity-100 transition-opacity px-1.5 py-0.5 hover:bg-red-500/10 rounded"
+                  title="Unsend message"
+                >
+                  ↩️
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      );
+    })}
+  </AnimatePresence>
         
         {/* TYPING INDICATOR */}
         {isTyping && (
