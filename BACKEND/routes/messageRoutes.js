@@ -34,6 +34,7 @@ router.post("/", auth, async (req, res) => {
 router.get("/:chatId", auth, async (req, res) => {
   const messages = await Message.find({
     chatId: req.params.chatId,
+    isDeleted: false,
   }).sort({ createdAt: 1 });
 
   res.json(messages);

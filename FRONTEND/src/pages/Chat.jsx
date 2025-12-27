@@ -87,14 +87,10 @@ const onEmojiClick = (emojiData) => {
       }
     };
 
-    const messageDeletedHandler = ({ chatId: deletedChatId, messageId, text: deletedText, isDeleted }) => {
+    const messageDeletedHandler = ({ chatId: deletedChatId, messageId, isDeleted }) => {
       if (deletedChatId !== chatId) return;
       setMessages((prev) =>
-        prev.map((m) =>
-          m._id === messageId
-            ? { ...m, text: deletedText, isDeleted }
-            : m
-        )
+        prev.filter((m) => m._id !== messageId)
       );
     };
 
