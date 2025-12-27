@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getSocket } from "../services/socket";
 import VideoRoom from "../components/VideoRoom";
 import { useTheme } from "../context/ThemeContext";
+import EmojiPicker from "emoji-picker-react";
+
 
 export default function Chat() {
   const { chatId } = useParams();
@@ -20,6 +22,13 @@ export default function Chat() {
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingIndicatorTimeoutRef = useRef(null);
+
+  const [showEmoji, setShowEmoji] = useState(false);
+
+const onEmojiClick = (emojiData) => {
+  setText((prev) => prev + emojiData.emoji);
+};
+
 
   const myId = JSON.parse(
     atob(window.localStorage.getItem("token").split(".")[1])
@@ -78,14 +87,10 @@ export default function Chat() {
       }
     };
 
-    const messageDeletedHandler = ({ chatId: deletedChatId, messageId, text: deletedText, isDeleted }) => {
+    const messageDeletedHandler = ({ chatId: deletedChatId, messageId, isDeleted }) => {
       if (deletedChatId !== chatId) return;
       setMessages((prev) =>
-        prev.map((m) =>
-          m._id === messageId
-            ? { ...m, text: deletedText, isDeleted }
-            : m
-        )
+        prev.filter((m) => m._id !== messageId)
       );
     };
 
@@ -114,8 +119,12 @@ export default function Chat() {
         Authorization: `Bearer ${window.localStorage.getItem("token")}`,
       },
     })
-      .then((res) => res.json())
-      .then(setMessages);
+    .then((res) => res.json())
+.then((data) => {
+  const filtered = data.filter((m) => !m.isDeleted);
+  setMessages(filtered);
+});
+
   }, [chatId]);
 
   /* AUTO SCROLL */
@@ -125,39 +134,36 @@ export default function Chat() {
 
   /* TYPING DETECTION */
   useEffect(() => {
-    if (!text.trim()) {
-      socket.emit("stopTyping", { chatId });
-      return;
-    }
+  if (!text.trim()) {
+    socket.emit("stopTyping", { chatId });
+    return;
+  }
 
-    socket.emit("typing", { chatId });
+  socket.emit("typing", { chatId });
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+  clearTimeout(typingTimeoutRef.current);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stopTyping", { chatId });
-    }, 1000);
+  typingTimeoutRef.current = setTimeout(() => {
+    socket.emit("stopTyping", { chatId });
+  }, 1500); // 👈 smoother UX
 
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [text, chatId, socket]);
+  return () => clearTimeout(typingTimeoutRef.current);
+}, [text, chatId, socket]);
+
 
   const sendMessage = () => {
-    if (!text.trim()) return;
+  const message = text.trim();
+  if (!message) return;
 
-    socket.emit("sendMessage", {
-      chatId,
-      senderId: myId,
-      text,
-    });
+  socket.emit("sendMessage", {
+    chatId,
+    senderId: myId,
+    text: message,
+  });
 
-    setText("");
-  };
+  setText("");
+};
+
 
   const unsendMessage = (messageId) => {
     socket.emit("unsendMessage", {
@@ -229,83 +235,77 @@ export default function Chat() {
       {/* MESSAGES */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6">
         <AnimatePresence>
-          {messages.map((m) => {
-            const isMine = String(m.sender) === String(myId);
-            const status = m.status || "sent";
-            const isDeleted = m.isDeleted || false;
-            
-            // Status indicator component - Professional
-            const StatusIndicator = () => {
-              if (!isMine || isDeleted) return null;
-              
-              if (status === "seen") {
-                return (
-                  <span className="text-xs ml-1 text-blue-500 font-bold">✔️✔️</span>
-                );
-              } else if (status === "delivered") {
-                return (
-                  <span className="text-xs ml-1 text-gray-400">✔️✔️</span>
-                );
-              } else {
-                return (
-                  <span className="text-xs ml-1 text-gray-400">✔️</span>
-                );
-              }
-            };
+    {messages.map((m) => {
+      // 🔥 INSTAGRAM STYLE: completely remove deleted messages
+      if (m.isDeleted) return null;
 
-            return (
-              <motion.div
-                key={m._id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`flex mb-4 ${
-                  isMine ? "justify-end" : "justify-start"
+      const isMine = String(m.sender) === String(myId);
+      const status = m.status || "sent";
+
+      const StatusIndicator = () => {
+        if (!isMine) return null;
+
+        if (status === "seen") {
+          return <span className="text-xs ml-1 text-blue-500 font-bold">✔️✔️</span>;
+        } else if (status === "delivered") {
+          return <span className="text-xs ml-1 text-gray-400">✔️✔️</span>;
+        } else {
+          return <span className="text-xs ml-1 text-gray-400">✔️</span>;
+        }
+      };
+
+      return (
+        <motion.div
+          key={m._id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className={`flex mb-4 ${isMine ? "justify-end" : "justify-start"}`}
+          onMouseEnter={() => isMine && setHoveredMessageId(m._id)}
+          onMouseLeave={() => setHoveredMessageId(null)}
+        >
+          <div className="flex flex-col items-end relative group">
+            <div
+              className={`max-w-[90%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                whitespace-pre-wrap break-words overflow-hidden
+                ${
+                  isMine
+                    ? dark
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-500 text-white"
+                    : dark
+                    ? "bg-white/10 text-white"
+                    : "bg-white/30 text-black"
                 }`}
-                onMouseEnter={() => isMine && !isDeleted && setHoveredMessageId(m._id)}
-                onMouseLeave={() => setHoveredMessageId(null)}
-              >
-                <div className="flex flex-col items-end relative group">
-                  <div
-                    className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words ${
-                      isDeleted
-                        ? dark
-                          ? "bg-slate-700/50 text-gray-400 italic"
-                          : "bg-slate-300/50 text-gray-500 italic"
-                        : isMine
-                        ? dark
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                          : "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
-                        : dark
-                        ? "bg-white/10 text-white backdrop-blur"
-                        : "bg-white/30 text-black backdrop-blur"
-                    }`}
-                  >
-                    {isDeleted ? "🗑️ This message was deleted" : m.text}
-                  </div>
-                  <div className="flex items-center mt-1 px-1 gap-1.5">
-                    <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                      {formatTime(m.createdAt)}
-                    </span>
-                    <StatusIndicator />
-                    {hoveredMessageId === m._id && !isDeleted && (
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={() => unsendMessage(m._id)}
-                        className="text-xs text-red-500 hover:text-red-600 opacity-70 hover:opacity-100 transition-opacity px-1.5 py-0.5 hover:bg-red-500/10 rounded"
-                        title="Unsend message"
-                      >
-                        ↩️
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+            >
+              {m.text}
+            </div>
+
+            <div className="flex items-center mt-1 px-1 gap-1.5">
+              <span className={`text-xs ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                {formatTime(m.createdAt)}
+              </span>
+              <StatusIndicator />
+
+              {hoveredMessageId === m._id && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={() => unsendMessage(m._id)}
+                  className="text-xs text-red-500 hover:text-red-600 opacity-70 hover:opacity-100 transition-opacity px-1.5 py-0.5 hover:bg-red-500/10 rounded"
+                  title="Unsend message"
+                >
+                  ↩️
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      );
+    })}
+  </AnimatePresence>
         
         {/* TYPING INDICATOR */}
         {isTyping && (
@@ -341,64 +341,108 @@ export default function Chat() {
               : "border-black/10 bg-white/60"
           }`}
       >
-        <div className="flex items-center gap-3">
-          {/* VIDEO BUTTON */}
-          <button
-            onClick={() => setVideoOpen(true)}
-            className="w-11 h-11 rounded-lg bg-emerald-500/80
-                       hover:bg-emerald-500 hover:scale-105
-                       active:scale-95 transition-all duration-200
-                       flex items-center justify-center text-lg
-                       shadow-lg shadow-emerald-500/30"
-            title="Start video call"
-          >
-            📹
-          </button>
+       <div className="flex items-center gap-3 relative">
+  {/* VIDEO BUTTON */}
+  <button
+    onClick={() => setVideoOpen(true)}
+    className="w-11 h-11 rounded-lg bg-white
+               hover:bg-gray-500 hover:scale-105
+               active:scale-100 transition-all duration-200
+               flex items-center justify-center text-lg
+               shadow-lg shadow-emerald-500/30"
+    title="Start video call"
+  >
+    📹
+  </button>
 
-          {/* INPUT */}
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Write a message…"
-            className={`flex-1 px-4 py-3 rounded-2xl outline-none
-              ${
-                dark
-                  ? "bg-white/10 text-white placeholder-gray-400"
-                  : "bg-black/10 text-black placeholder-gray-500"
-              }
-              focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          />
+  {/* EMOJI BUTTON */}
+<button
+  onClick={() => setShowEmoji((p) => !p)}
+  className="w-11 h-11 rounded-lg
+             bg-white hover:bg-gray-400
+             active:scale-95 transition-all
+             flex items-center justify-center"
+  title="Emoji"
+>
+  <img
+    src="https://external-preview.redd.it/get-the-google-pixel-animated-emojis-on-signal-v0--ijLTYX2qLolbIqGFomfrMZ8LSJYsX85Cd-2GPwvvzE.jpg?width=1080&crop=smart&auto=webp&s=197c2536526c12b102dec621d802c4e19f0a5a30"
+    alt="Emoji Picker"
+    className="w-9 h-9 object-cover rounded-full"
+    draggable={false}
+    onError={(e) => {
+      e.currentTarget.src =
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF02Jj8T2t7PdkytAw42HDuuSz7yXguKn8Lg&s";
+    }}
+  />
+</button>
 
-          {/* SEND BUTTON */}
-          <AnimatePresence>
-            {text.trim() && (
-              <motion.button
-                onClick={sendMessage}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
-                className="w-11 h-11 rounded-lg
-                           bg-blue-500 hover:bg-blue-600
-                           hover:shadow-lg hover:shadow-blue-500/40
-                           hover:scale-110 active:scale-95
-                           transition-all duration-200
-                           flex items-center justify-center
-                           font-bold text-white text-lg"
-                title="Send message"
-              >
-                ➤
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
+
+  {/* EMOJI PICKER */}
+  {showEmoji && (
+    <div className="absolute bottom-16 left-14 z-50">
+      <EmojiPicker
+        theme={dark ? "dark" : "light"}
+        onEmojiClick={onEmojiClick}
+      />
+    </div>
+  )}
+
+  {/* INPUT */}
+  <input
+    value={text}
+    onChange={(e) => setText(e.target.value)}
+    placeholder="Write a message…"
+    className={`flex-1 px-4 py-3 rounded-2xl outline-none
+      ${
+        dark
+          ? "bg-white/10 text-white placeholder-gray-400"
+          : "bg-black/10 text-black placeholder-gray-500"
+      }
+      focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+        setShowEmoji(false);
+      }
+    }}
+  />
+
+  {/* SEND BUTTON */}
+  <AnimatePresence>
+    {text.trim() && (
+      <motion.button
+        onClick={() => {
+          sendMessage();
+          setShowEmoji(false);
+        }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ duration: 0.15 }}
+        className="w-11 h-11 rounded-lg
+                   bg-blue-500 hover:bg-blue-600
+                   hover:shadow-lg hover:shadow-blue-500/40
+                   hover:scale-110 active:scale-95
+                   transition-all duration-200
+                   flex items-center justify-center
+                   font-bold text-white text-lg"
+        title="Send message"
+      >
+        ➤
+      </motion.button>
+    )}
+  </AnimatePresence>
+</div>
+
       </div>
 
       {/* VIDEO ROOM */}
       {videoOpen && (
         <VideoRoom isCaller={true} onClose={() => setVideoOpen(false)} />
       )}
+
+    
     </div>
   );
 }

@@ -234,7 +234,7 @@ io.on("connection", (socket) => {
     io.to(chatId).emit("messageDeleted", {
       chatId,
       messageId,
-      text: "🗑️ This message was deleted",
+      isDeleted: true,
     });
   });
 
