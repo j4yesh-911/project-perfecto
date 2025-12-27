@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import API from "../services/api";
 import SwipeCard from "../components/SwipeCard";
+import { MapPin, BookOpen, Lightbulb, MessageCircle, Video, Heart, RefreshCw } from "lucide-react";
 
 /* ================= MATCH HELPERS ================= */
 const calculateSkillMatch = (me, user) => {
@@ -100,7 +102,16 @@ export default function UserProfilePage() {
     load();
   }, [id, navigate]);
 
-  if (loading) return <p className="p-6">Loading...</p>;
+  if (loading)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-green-900 dark:to-blue-900 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full"
+        />
+      </div>
+    );
 
   const isSwapper = mySwappers.includes(selectedUser._id);
   const isSent = sentRequestIds.includes(selectedUser._id);
@@ -150,90 +161,166 @@ export default function UserProfilePage() {
   };
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-green-900 dark:to-blue-900 p-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
 
         {/* ================= LEFT PROFILE ================= */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-          <img
-            src={avatar}
-            className="w-32 h-32 rounded-full mx-auto border-2 border-violet-500"
-          />
+        <motion.div
+          className="bg-white/20 dark:bg-gray-800/50 backdrop-blur-xl border border-white/30 dark:border-gray-700/50 rounded-3xl p-8 shadow-2xl"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <motion.div
+            className="text-center mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.img
+              src={avatar}
+              className="w-32 h-32 rounded-full mx-auto border-4 border-gradient-to-r from-green-400 to-blue-500 shadow-xl"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            />
+            <h1 className="text-3xl font-bold mt-4 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              @{selectedUser.username}
+            </h1>
+            <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300 mt-2">
+              <MapPin className="w-4 h-4" />
+              <p>{selectedUser.city || "—"}, {selectedUser.state || "—"}</p>
+            </div>
+          </motion.div>
 
-          <h1 className="text-2xl font-bold text-center mt-4">
-            @{selectedUser.username}
-          </h1>
+          <motion.div
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="bg-white/10 dark:bg-gray-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="w-5 h-5 text-green-500" />
+                <h3 className="font-semibold text-green-600 dark:text-green-400">Teaches</h3>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300">
+                {selectedUser.skillsToTeach?.join(", ") || "N/A"}
+              </p>
+            </div>
+            <div className="bg-white/10 dark:bg-gray-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-5 h-5 text-blue-500" />
+                <h3 className="font-semibold text-blue-600 dark:text-blue-400">Learns</h3>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300">
+                {selectedUser.skillsToLearn?.join(", ") || "N/A"}
+              </p>
+            </div>
+          </motion.div>
 
-          <p className="text-center text-gray-400 mt-1">
-            {selectedUser.city || "—"}, {selectedUser.state || "—"}
-          </p>
-
-          <div className="mt-6 text-sm space-y-2">
-            <p><b>Teaches:</b> {selectedUser.skillsToTeach?.join(", ") || "N/A"}</p>
-            <p><b>Learns:</b> {selectedUser.skillsToLearn?.join(", ") || "N/A"}</p>
-          </div>
-
-          <div className="mt-8">
+          <motion.div
+            className="mt-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
             {isSwapper ? (
               <div className="flex gap-3">
-                <button onClick={startChat} className="flex-1 bg-cyan-500/20 p-2 rounded-lg">Chat</button>
-                <button onClick={startVideo} className="flex-1 bg-violet-500/20 p-2 rounded-lg">Video</button>
+                <motion.button
+                  onClick={startChat}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Chat
+                </motion.button>
+                <motion.button
+                  onClick={startVideo}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Video className="w-4 h-4" />
+                  Video
+                </motion.button>
               </div>
             ) : isSent ? (
-              <div className="text-center text-yellow-400 font-semibold">
+              <div className="text-center text-yellow-500 dark:text-yellow-400 font-semibold py-4">
                 ⏳ Request Sent
               </div>
             ) : (
-              <button
+              <motion.button
                 onClick={sendSwapRequest}
                 disabled={sending}
-                className="w-full bg-emerald-500/20 p-2 rounded-lg"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
+                <Heart className="w-4 h-4" />
                 {sending ? "Sending..." : "SwapSkill"}
-              </button>
+              </motion.button>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* ================= RIGHT SUGGESTIONS ================= */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">People you may like</h2>
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              People you may like
+            </h2>
 
-            {/* 🌟 AESTHETIC REFRESH PILL */}
-            <button
+            <motion.button
               onClick={refreshSuggestions}
-              className="
-                group relative w-10 h-10 rounded-full
-                bg-white/10 backdrop-blur-xl
-                border border-white/20
-                hover:bg-white/20 transition
-                flex items-center justify-center
-              "
+              className="group relative w-12 h-12 rounded-full bg-white/20 dark:bg-gray-800/50 backdrop-blur-xl border border-white/30 dark:border-gray-700/50 hover:bg-white/30 dark:hover:bg-gray-700/50 transition-all duration-300 flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <span
-                className={`
-                  text-lg transition-transform
-                  ${refreshing ? "animate-spin" : "group-hover:rotate-180"}
-                `}
-              >
-                ⟳
-              </span>
-            </button>
+              <RefreshCw
+                className={`w-5 h-5 text-gray-600 dark:text-gray-300 transition-transform duration-300 ${
+                  refreshing ? "animate-spin" : "group-hover:rotate-180"
+                }`}
+              />
+            </motion.button>
           </div>
 
-          <div className="flex flex-wrap gap-6 justify-center">
+          <motion.div
+            className="flex flex-wrap gap-6 justify-center"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                },
+              },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
             {suggestedUsers.map((u) => (
-              <SwipeCard
+              <motion.div
                 key={u._id}
-                user={u}
-                isAlreadySwapper={false}
-                isSent={sentRequestIds.includes(u._id)}
-                setSentRequestIds={setSentRequestIds}
-              />
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <SwipeCard
+                  user={u}
+                  isAlreadySwapper={false}
+                  isSent={sentRequestIds.includes(u._id)}
+                  setSentRequestIds={setSentRequestIds}
+                />
+              </motion.div>
             ))}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

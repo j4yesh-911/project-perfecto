@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import API from "../services/api";
 import { useNavigate } from "react-router-dom";
+import { Heart, MessageCircle, Video } from "lucide-react";
 
 export default function SwipeCard({
   user,
@@ -43,45 +44,95 @@ export default function SwipeCard({
 
   return (
     <motion.div
-      /* 🔥 ONLY CHANGE IS HERE */
       onClick={() => navigate(`/users/${user._id}`)}
-      className="cursor-pointer w-80 h-96 rounded-2xl bg-white/10
-                 backdrop-blur-xl border border-white/20 shadow-xl
-                 flex flex-col items-center p-6"
-      whileHover={{ scale: 1.05 }}
+      className="cursor-pointer w-80 h-96 rounded-3xl bg-gradient-to-br from-white/20 to-white/5 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl border border-white/30 dark:border-gray-700/50 shadow-2xl flex flex-col items-center p-6 relative overflow-hidden group"
+      whileHover={{
+        scale: 1.05,
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+      }}
+      whileTap={{ scale: 0.98 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      <img
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 via-purple-400/10 to-pink-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <motion.img
         src={avatar}
-        className="w-28 h-28 rounded-full border-2 border-violet-500 mb-4"
+        className="w-28 h-28 rounded-full border-4 border-gradient-to-r from-blue-400 to-purple-500 mb-4 shadow-lg"
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 300 }}
       />
 
-      <h2 className="text-xl font-bold mb-2">
+      <motion.h2
+        className="text-xl font-bold mb-2 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
         @{user.username || user.name}
-      </h2>
+      </motion.h2>
 
-      <p className="text-sm text-gray-300 text-center">
+      <motion.p
+        className="text-sm text-gray-600 dark:text-gray-300 text-center mb-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
         {user.skillsToTeach?.join(", ") || "No skills added"}
-      </p>
+      </motion.p>
 
-      <div className="mt-auto">
+      <div className="mt-auto w-full">
         {isAlreadySwapper ? (
-          <span className="text-green-500 font-semibold">
-            ✓ Swap Partner
-          </span>
+          <motion.div
+            className="flex gap-2 justify-center"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <motion.button
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl border border-green-500/30 hover:bg-green-500/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat
+            </motion.button>
+            <motion.button
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Video className="w-4 h-4" />
+              Video
+            </motion.button>
+          </motion.div>
         ) : localIsSent ? (
-          <span className="text-yellow-400 font-semibold">
+          <motion.div
+            className="text-center text-yellow-500 dark:text-yellow-400 font-semibold py-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
             ⏳ Request Sent
-          </span>
+          </motion.div>
         ) : (
-          <button
+          <motion.button
             onClick={(e) => {
-              e.stopPropagation(); // 🚨 VERY IMPORTANT
+              e.stopPropagation();
               sendRequest();
             }}
-            className="px-4 py-2 bg-emerald-500/20 rounded-lg"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
           >
+            <Heart className="w-4 h-4" />
             SwapSkill
-          </button>
+          </motion.button>
         )}
       </div>
     </motion.div>
